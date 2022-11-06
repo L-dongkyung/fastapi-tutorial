@@ -28,3 +28,11 @@ url의 경우 `server.com/files//home/dir/file.ext`형식으로 입력합니다.
 async def read_file(file_path: str):
     ...
 ```
+
+## query parameters
+경로(path) 파라미터와 함께 사용할 수 있습니다.  
+`serer.com/path/path?key=value&key1=value1`의 형식으로 사용합니다.  
+파라미터가 여러개일 경우 **&** 로 구분하여 추가합니다.  
+
+Union 함수를 이용하거나 기본값을 설정하여 필수인지 선택인지 지정합니다.  
+
