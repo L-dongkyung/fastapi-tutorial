@@ -9,7 +9,7 @@ async def root():
     return {"message": "Hello World"}
 
 
-# 경로의 쿼리스트링 변수와 함수의 파라미터 이름이 같아야합니다. 다르면 에러 발생.
+# 경로의  변수와 함수의 파라미터 이름이 같아야합니다. 다르면 에러 발생.
 @app.get("/items/{item_id}")
 async  def read_item(item_id):
     """
@@ -41,7 +41,7 @@ async def read_user_name(user_name: str):
 
 class ModelName(str, Enum):
     """
-    str을 상속하는 이유는 쿼리스트링의 인수가 str형이라는 것을 알려줘 렌더링 할 수 있게 해줍니다.
+    str을 상속하는 이유는 경로의 인수가 str형이라는 것을 알려줘 렌더링 할 수 있게 해줍니다.
     Enum을 통해서 swagger에서 파라미터 설정을 선택할 수 있습니다.
     """
     alexnet = "alexnet"
