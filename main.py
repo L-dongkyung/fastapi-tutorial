@@ -1,8 +1,12 @@
 from enum import Enum
 
+import uvicorn
 from fastapi import FastAPI
 
 app = FastAPI()
+
+if __name__ == '__main__':
+    uvicorn.run('main:app', reload=True)
 
 @app.get("/")
 async def root():
@@ -108,3 +112,18 @@ async def short_req(short_id: str, needy: str):
 @app.get("/option_short/{short_id}")
 async def opt_short(short_id: str, option: Union[int, None] = None):  # Union을 사용하는 것과 안쓰는 것의 차이는?
     return {'short_id': short_id, 'option': option}
+
+
+# request body
+from pydantic import BaseModel
+
+class Item(BaseModel):
+    name: str
+    description: Union[str, None] = None
+    price: float
+    tax: Union[float, None] = None
+
+
+@app.post("/create_items/")
+async def create_item(item: Item):
+    return item

@@ -63,3 +63,26 @@ async def read_file(file_path: str):
 
 Union 함수를 이용하거나 기본값을 설정하여 필수인지 선택인지 지정합니다.  
 
+## Request Body
+데이터를 body에 담아서 요청할 수 있습니다.  
+Http Method는 POST, PUT, DELETE, PATCH을 사용합니다.  
+`pydantic`의 `BaseModel`클래스를 이용하여 데이터 모델을 정의합니다.  
+클래스의 필드에 type annotation을 지정합니다.
+```python
+from pydantic import BaseModel
+
+class ModelName(BaseModel):
+    field1: str
+    field2: int
+```
+요청의 파라미터에 위의 데이터 클래스를 type annotation합니다.
+```python
+@app.post('/path/')
+async def funtion(param: ModelName):
+    ...
+```
+parameter의 타입을 지정하는 것으로 FastAPI는 다음의 작업을 수행합니다.
+* 인수의 데이터 값을 JSON으로 읽습니다.
+* 정의된 type으로 변환합니다.
+* 데이터를 검증합니다.
+* 파라미터에 데이터를 전달합니다.
