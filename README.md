@@ -86,3 +86,26 @@ parameter의 타입을 지정하는 것으로 FastAPI는 다음의 작업을 수
 * 정의된 type으로 변환합니다.
 * 데이터를 검증합니다.
 * 파라미터에 데이터를 전달합니다.
+
+## API Router
+main파일에 모든 API 엔드포인트를 정의하면 관리가 힘들어 파일별로 나눌 수 있습니다.  
+이를 위해 APIRouter 클래스를 사용하고 prefix, tags 등 여러 옵션값을 정의할수 있습니다.  
+```python
+feater.py
+from fastapi import APIRouter
+
+router = APIRouter(prefix='/prefix', tags=['name'])
+
+@router.get("/path")
+async def funtion():
+    ...
+```
+기능별로 구분한 파일에서 APIRouter클래스를 데코레이트하여 함수를 정의합니다.  
+FastAPI클래스를 정의한 파일에서 기능정의한 클래스를 import하여  
+include_router함수를 사용하여 app에 추가합니다.
+```python
+main.py
+import feater
+
+app.include_router(feater.router)
+```
