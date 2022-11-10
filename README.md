@@ -75,7 +75,9 @@ class ModelName(BaseModel):
     field1: str
     field2: int
 ```
-요청의 파라미터에 위의 데이터 클래스를 type annotation합니다.
+요청의 파라미터에 위의 데이터 클래스를 type annotation합니다.  
+<br>
+
 ```python
 @app.post('/path/')
 async def funtion(param: ModelName):
@@ -108,4 +110,108 @@ main.py
 import feater
 
 app.include_router(feater.router)
+```
+
+## Query Class validation
+### 기본 사용법
+쿼리 데이터의 검증을 fastapi의 `Query`클래스를 이용해서 할수 있습니다.  
+```python
+from fastapi import FastAPI, Query
+
+app = FastAPI()
+
+@app.get("/items/")
+async def read_items(q: str = Query(min_length=3)):
+    if q:
+        return {"q": q}
+```
+### default
+필수/옵션 파리미터의 경우 default 옵션으로 지정 가능합니다.  
+일반적으로 필수요소의 경우 `default`를 사용하지 않으므로 `...`과 `Required`를 사용할 필요가 없습니다.
+```python
+from fastapi import FastAPI, Query
+from pydantic import Required
+
+@app.get("/items/")
+async def read_items(q: str = Query(default=...|Required|None, min_length=3)):
+    if q:
+        return {"q": q}
+```
+* *...* 필수요소. Ellipsis로 필수요소를 표현합니다.
+* *Required* 필수요소. pydantic에서 필수요소를 표현합니다.
+* *None* 선택요소. 선택요소 표현으로 데이터가 없을 경우 None.
+  * Query클래스를 정의할 경우 Union을 통한 선택요소 구성은 불가능합니다.
+    ```python
+    # Union으로 선택구성하였지만 필수요소로 정의됨.
+    @app.get("/union_option")
+    async def use_union_option(q: Union[str, None] = Query(max_length=10)):
+        return {"q": q}
+    ```
+<br>
+
+### 정규표현식
+정규식을 통해서 입력 파라미터를 검증할 수 있습니다.  
+정규식에 대해서는 사용하면서 공부하는 것도 하나의 방법입니다.
+```python
+@app.get("/regex_ex")
+async def regex(number:str = Query(regex="^[0-9]{3}-[0-9]{4}-[0-9]{4}$")):
+    return {'phone_num': number}
+```
+<br>
+
+### list
+쿼리스트링으로 리스트를 받는 방법은 두가지가 있습니다.  
+1. 한 변수를 여러번 지정하여 값을 넘겨주는 방법.
+2. 타입을 list로 지정하여 값들을 전달 받는 방법.
+코드상에서는 다르게 표현하지만 url에서는 큰 차이가 없어보입니다.  
+list 타입을 쿼리 매개변수로 받으려면 꼭 `Query`클래스를 명시적으로 사용해야합니다. 그렇지 않으면 `body` 매개변수로 해석합니다.
+```python
+@app.get("/reduplication_item/")
+async def reduplication_item(q: list[str] = Query(default=None)):
+    return {"q": q}
+@app.get("/list_item/")
+async def list_item(q: list[str] = Query(default=[])):
+    return {"q": q}
+```
+<br>
+
+### title, description
+쿼리 매개변수에 title과 description을 추가할 수 있습니다.
+이것은 매개변수에 대한 추가적인 데이터를 지정하는 것으로 예상됩니다.
+```python
+q: Union[str, None] = Query(
+        default=None,
+        title="Query string",
+        description="Query string for the items to search in the database that have a good match",
+        min_length=3,
+    )
+```
+<br>
+
+### alias
+alias를 이용한 파라미터 매핑을 할 수 있습니다.  
+파이썬에서 사용할 수 없는 변수를 받아야할 경우 유용합니다.  
+변수가 숫자로 시작하거나, -가 들어가있는 등.
+```python
+q: Union[str, None] = Query(default=None, alias="item-query")
+```
+<br>
+
+### deprecated
+deprecated를 이용해서 매개변수의 사용 중단을 문서(**docs**)에 표시할 수 있습니다.  
+문서에서만 표시를 하고, 코드를 유지하면 계속 매개변수를 받습니다.
+```python
+q: Union[str, None] = Query(
+    default=None,
+    alias="item-query",
+    deprecated=True,
+)
+```
+<br>
+
+### include_in_schema
+include_in_schema를 이용해서 문서에서 해당 매개변수를 제외할 수 있습니다.  
+서버에서 매개변수를 받아 처리할 수는 있어 서버의 변화는 없습니다.
+```python
+q: str = Query(default=None, include_in_schema=False)
 ```
