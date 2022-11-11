@@ -147,8 +147,6 @@ async def read_items(q: str = Query(default=...|Required|None, min_length=3)):
     async def use_union_option(q: Union[str, None] = Query(max_length=10)):
         return {"q": q}
     ```
-<br>
-
 ### 정규표현식
 정규식을 통해서 입력 파라미터를 검증할 수 있습니다.  
 정규식에 대해서는 사용하면서 공부하는 것도 하나의 방법입니다.
@@ -157,8 +155,6 @@ async def read_items(q: str = Query(default=...|Required|None, min_length=3)):
 async def regex(number:str = Query(regex="^[0-9]{3}-[0-9]{4}-[0-9]{4}$")):
     return {'phone_num': number}
 ```
-<br>
-
 ### list
 쿼리스트링으로 리스트를 받는 방법은 두가지가 있습니다.  
 1. 한 변수를 여러번 지정하여 값을 넘겨주는 방법.
@@ -173,8 +169,6 @@ async def reduplication_item(q: list[str] = Query(default=None)):
 async def list_item(q: list[str] = Query(default=[])):
     return {"q": q}
 ```
-<br>
-
 ### title, description
 쿼리 매개변수에 title과 description을 추가할 수 있습니다.
 이것은 매개변수에 대한 추가적인 데이터를 지정하는 것으로 예상됩니다.
@@ -186,8 +180,6 @@ q: Union[str, None] = Query(
         min_length=3,
     )
 ```
-<br>
-
 ### alias
 alias를 이용한 파라미터 매핑을 할 수 있습니다.  
 파이썬에서 사용할 수 없는 변수를 받아야할 경우 유용합니다.  
@@ -195,8 +187,6 @@ alias를 이용한 파라미터 매핑을 할 수 있습니다.
 ```python
 q: Union[str, None] = Query(default=None, alias="item-query")
 ```
-<br>
-
 ### deprecated
 deprecated를 이용해서 매개변수의 사용 중단을 문서(**docs**)에 표시할 수 있습니다.  
 문서에서만 표시를 하고, 코드를 유지하면 계속 매개변수를 받습니다.
@@ -207,11 +197,56 @@ q: Union[str, None] = Query(
     deprecated=True,
 )
 ```
-<br>
-
 ### include_in_schema
 include_in_schema를 이용해서 문서에서 해당 매개변수를 제외할 수 있습니다.  
 서버에서 매개변수를 받아 처리할 수는 있어 서버의 변화는 없습니다.
 ```python
 q: str = Query(default=None, include_in_schema=False)
+```
+
+## Path Class validation
+Path 클래스의 사용법은 Query 클래스의 사용법과 유사합니다.  
+### default
+경로 매개변수는 경로의 일부이므로 무조건 필수요소입니다.  
+default를 정의할 수 있지만 의미는 없습니다.  
+```python
+from fastapi import FastAPI, Path
+
+@app.get("/items/{item_id}")
+async def read_items(item_id: int = Path(default=None)):
+    return {"item_id": item_id}
+```
+### 매개변수 정렬하기
+파이썬에서 함수의 매개변수는 기본값이 없는 것을 앞에, 기본값이 있는 것을 뒤에 위치해야합니다.  
+엔드포인트의 매개변수에 기본값이 없는 경우 필수요소로 정의합니다.  
+Path 파라미터는 필요소요이므로 기본값을 정의 할 수도 있습니다.  
+query 파라미터의 경우도 필수요소인 경우 기본값을 정의하지 않을 수 있습니다.  
+이경우 query파라미터와 path 파라미터의 위치에 따라 파이썬에러가 발생할 수 있습니다.  
+```python
+@app.get("/items/{item_id}")
+async def read_items(q: str, item_id: int = Path(title="The ID of the item to get")):
+    return {"item_id": item_id, "q": q}
+```
+위의 경우 Path 파라미터는 기본값을 가지고 있으므로 뒤에 위치 시킵니다.  
+fastapi는 파라미터의 위치와 관계없이 알맞은 파라미터를 찾습니다.  
+  
+에스터리스크(*)을 사용하여 위치를 유지할수도 있습니다.  
+에스터리스크는 뒤 따르는 매개변수들이 `kwargs`임을 정의하여 `key-value`의 형태를 가지게 합니다.  
+따라서 기본값이 없는 경우에도 파이썬 에러가 발생하지 않습니다.
+```python
+@app.get("/items/{item_id}")
+async def read_items(*, item_id: int = Path(title="The ID"), q: str):
+    return {"item_id": item_id, "q": q}
+```
+
+### 숫자 범위 검증
+숫자를 매개변수로 받을때 이상, 초과, 이하, 미만을 정의할 수 있습니다.
+* ge: 이상
+* gt: 초과
+* le: 이하
+* lt: 미만
+```python
+@app.get("/items/{item_id}")
+async def get_item(*, item_id: int = Path(ge=0, le=1000)):
+    return {"item_id": item_id}
 ```

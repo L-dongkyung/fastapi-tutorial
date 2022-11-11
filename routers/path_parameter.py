@@ -1,7 +1,7 @@
 from typing import Union
 from enum import Enum
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Path
 
 router = APIRouter(
     prefix="/path"
@@ -68,3 +68,25 @@ async def read_file(file_path: str):
     :return:
     """
     return {"file_path": file_path}
+
+
+# query 파라미터의 기본값이 없을 경우 순서 이동.
+# 파라미터의 위치를 변경하여 기본값이 없는 것을 앞으로 이동.
+@router.get("/option_item/{item_id}")
+async def option_q(q: str, item_id: int = Path(title='path parameter')):
+    item = {"item_id": item_id}
+    if q:
+        item.update({'q': q})
+    return item
+
+
+# 에스터리스크를 이용한 파라미터 위치 설정.
+@router.get("/aster/{item_id}")
+async def aster(*, item_id: int = Path(title="title"), q: str):
+    return {'item_id': item_id, 'q': q}
+
+
+# 숫자 범위 정의
+@router.get("/range/{item_id}")
+async def range_int(item_id: int = Path(ge=0, lt=1000)):
+    return {'item_id': item_id}
