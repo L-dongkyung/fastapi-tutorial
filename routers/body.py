@@ -1,6 +1,6 @@
 from typing import Union
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 from pydantic import BaseModel
 
 
@@ -19,3 +19,8 @@ class Item(BaseModel):
 @router.post("/create_items/")
 async def create_item(item: Item):
     return item
+
+@router.put("/items/{item_id}")
+async def update_item(item_id: int, item: Item):
+    results = {"item_id": item_id, "item": item}
+    return results

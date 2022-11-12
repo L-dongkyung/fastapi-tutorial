@@ -250,3 +250,48 @@ async def read_items(*, item_id: int = Path(title="The ID"), q: str):
 async def get_item(*, item_id: int = Path(ge=0, le=1000)):
     return {"item_id": item_id}
 ```
+
+## Body Class validation
+`Query` 및 `Path` 동등하게 `Body`클래스를 이용할 수 있습니다.  
+
+### Singular values in body
+Body 클래스는 단일요소를 매개변수로 받고 싶을때에 query 파라미터와의 구분을 위해 사용합니다.
+```python
+from fastapi import Body
+from pydantic import BaseModel
+
+class Item(BaseModel):
+  ...
+
+@app.put("/items/")
+async def update_item(item: Item, importance: int = Body()):
+    return {"item": item, 'importance': importance}
+```
+
+### Embed a single body parameter
+Embed 옵션을 통해서 내부에 정의되어 있음을 정의할 수 있습니다.
+```python
+class Item(BaseModel):
+    ...
+
+@app.put("/items/")
+async def update_item(item: Item = Body(embed=True)):
+    return {"item": item}
+```
+
+### Multiple body parameters
+여러 데이터 모델을 정의하고 body에 여러 파라미터를 받을 수 있습니다.
+```python
+from pydantic import BaseModel
+from fastapi import Body
+
+class Item(BaseModel):
+    ...
+
+class User(BaseModel):
+    ...
+
+@app.put("/items/")
+async def update_item(item: Item, user: User):
+    ...
+```
