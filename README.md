@@ -295,3 +295,37 @@ class User(BaseModel):
 async def update_item(item: Item, user: User):
     ...
 ```
+
+## list, set, dict의 자료형 정의.
+```python
+class item(BaseModel):
+    name: str
+    tags: list[str] = []
+    keyword: set[str] = set()
+    comment: dict[str, str] = {}
+```
+## 모델을 이용한 내장모델
+자료형을 기본자료형 이외에 사용자 정의 자료형으로 설정할 수 있습니다.
+```python
+from pydantic import BaseModel
+
+class Image(BaseModel):
+    name: str
+    url: str
+
+class Item(BaseModel):
+    name: str
+    desc: str
+    images: Image = None
+```
+## 특별한 자료형 검증
+str, int, float 등 기본 자료형 이외에 pydantic에서 제공하는 많은 자료형이 있습니다.  
+이를 이용해서 입력 데이터의 검증을 사전에 확인하고 코드의 복잡성을 줄일 수 있습니다.  
+`https://pydantic-docs.helpmanual.io/usage/types/`
+* HttpUrl
+* Color
+* EmailStr
+* FilePath
+* UUID1
+* ...
+
