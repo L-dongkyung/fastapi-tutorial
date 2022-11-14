@@ -320,8 +320,8 @@ class Item(BaseModel):
 ```
 ## 특별한 자료형 검증
 str, int, float 등 기본 자료형 이외에 pydantic에서 제공하는 많은 자료형이 있습니다.  
-이를 이용해서 입력 데이터의 검증을 사전에 확인하고 코드의 복잡성을 줄일 수 있습니다.  
-`https://pydantic-docs.helpmanual.io/usage/types/`
+이를 이용해서 입력 데이터의 검증을 사전에 확인하고 코드의 복잡성을 줄일 수 있습니다.
+[pydantic-docs](https://pydantic-docs.helpmanual.io/usage/types/)
 * HttpUrl
 * Color
 * EmailStr
@@ -329,3 +329,67 @@ str, int, float 등 기본 자료형 이외에 pydantic에서 제공하는 많�
 * UUID1
 * ...
 
+## 모델의 예시 정의
+config, field, body의 세가지를 사용하여 예시를 적용할 수 있습니다.
+### Config
+```python
+class Model(BaseModel):
+    field1: str
+    field2: str
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "field1": "str",
+                "field2": "str"
+            }
+        }
+```
+### field
+```python
+from pydantic import Field
+
+class Model(BaseModel):
+    field1: str = Field(example="str")
+    field2: str = Field(example="str")
+```
+### body
+```python
+@app.put("/path/")
+async def func(
+        param: Class = Body(
+            example={
+                "field1": "str",
+                "field2": "str"
+            }
+        )
+):
+    return 
+```
+### body를 통해 여러 예시 적용
+```python
+@app.put("/path/")
+async def func(
+        param: Class = Body(
+            examples={
+                "category": {
+                    "summary": "title",
+                    "description": "docs's desc",
+                    "value": {
+                        "field1": "str",
+                        "field2": "str"
+                    }
+                },
+                "category2": {
+                    "summary": "title2",
+                    "description": "docs's desc2",
+                    "value": {
+                        "field1": "str2",
+                        "field2": "str2"
+                    }
+                }
+            }
+        )
+):
+    return 
+```
