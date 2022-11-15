@@ -322,12 +322,17 @@ class Item(BaseModel):
 str, int, float 등 기본 자료형 이외에 pydantic에서 제공하는 많은 자료형이 있습니다.  
 이를 이용해서 입력 데이터의 검증을 사전에 확인하고 코드의 복잡성을 줄일 수 있습니다.
 [pydantic-docs](https://pydantic-docs.helpmanual.io/usage/types/)
-* HttpUrl
-* Color
-* EmailStr
-* FilePath
-* UUID1
-* ...
+* `HttpUrl`
+* `Color`
+* `EmailStr`
+* `FilePath`
+* `UUID`: 데이터베이스와 시스템에서 사용되는 공통 ID
+* `datetime.datetime`: ISO 8601형식. `2008-09-15T15:53:00+05:00`
+* `datetime.date`: `2008-09-15`
+* `datetime.time`: `16:58:23.124`
+* `frozenset`: request에서는 set으로 변환하고, response에서는 list로 변환
+* `bytes`: 파이썬 표준 bytes타입의 str
+* `Decimal`: 파이썬 표준 Decimal타입의 float
 
 ## 모델의 예시 정의
 config, field, body의 세가지를 사용하여 예시를 적용할 수 있습니다.
