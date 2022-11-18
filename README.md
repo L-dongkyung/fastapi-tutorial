@@ -398,3 +398,13 @@ async def func(
 ):
     return 
 ```
+## Cookie
+쿠키를 파라미터로 받으려면 쿠키 클래스를 사용하여야합니다.  
+쿠키 클래스를 사용하지 않으면 fastapi는 쿼리 파라미터로 인식합니다.
+```python
+from fastapi import Cookie
+
+@app.get('/path')
+async def get_path(cookie: str = Cookie(default=None)):
+    return cookie
+```
