@@ -408,3 +408,18 @@ from fastapi import Cookie
 async def get_path(cookie: str = Cookie(default=None)):
     return cookie
 ```
+## Headers
+헤터를 클래스를 이용해서 파라미터를 사용할 수 있습니다.  
+```python
+from fastapi import Header
+
+@app.get('/headers')
+async def funtion(q: str = Header()):
+    return 
+```
+하나의 키에 여러개의 값이 있을 경우 list로 헤더 파라미터를 정의합니다.
+```python
+@app.get('/headers')
+async def funtion(q: list[str] = Header()):
+    return 
+```
