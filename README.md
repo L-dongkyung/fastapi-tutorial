@@ -423,3 +423,48 @@ async def funtion(q: str = Header()):
 async def funtion(q: list[str] = Header()):
     return 
 ```
+## Response Model
+http요청의 `GET, POST, PUT, DELETE, etc`에 대한 응답 모델을 정의할 수 있습니다.  
+`list[str]`과 같은 pydantic에서 지원하는 모델일 수 있지만 사용자 정의 모델을 사용할 수 있습니다.  
+```python
+class Class(BaseModel):
+    field1: str
+    field2: int
+
+    
+@app.get('/path', response_model=Class)
+async def read_item(params):
+    return params
+```
+### Response model의 데이터 선택
+**Class로 구분**  
+입력 model과 출력 model을 구분하여 정의할 수 있습니다.
+```python
+class InClass(BaseModel):
+    field1: str
+    field2: int
+
+
+class OutClass(BaseModel):
+    field1: str
+
+
+@app.post('/create_items/', response_model=OutClass)
+async def create_item(item: InClass):
+    return item  # OutClass
+```
+*response model에서 기본값 선언이 안되어있는데 데이터의 키 값이 없으면 에러 발생.  
+
+#### Parameter로 출력 데이터 선택
+1. response_model_exclude_unset=\<bool>  
+데이터의 키값이 response_model에 있는 항목만 반환합니다.
+2. response_model_exclude_defaults=\<bool>  
+데이터의 키값이 response_model에 기본값을 제외한 항목을 반환합니다.
+3. response_model_exclude_none=\<bool\>  
+데이터의 키값이 None인 항목을 제외하고 반환합니다.
+4. response_model_include=\<set>  
+response_model에서 반환할 field만 선택합니다.
+5. response_model_exclude=\<set>  
+response_model에서 반환하지 않을 field만 선택합니다.
+
+*4, 5번은 set 대신에 list, tuple을 사용할 수 있지만 pycharm에서 주황색 context action경고가 표시됩니다.
