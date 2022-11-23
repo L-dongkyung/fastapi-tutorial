@@ -467,4 +467,16 @@ response_model에서 반환할 field만 선택합니다.
 5. response_model_exclude=\<set>  
 response_model에서 반환하지 않을 field만 선택합니다.
 
-*4, 5번은 set 대신에 list, tuple을 사용할 수 있지만 pycharm에서 주황색 context action경고가 표시됩니다.
+*4, 5번은 set 대신에 list, tuple을 사용할 수 있지만 pycharm에서 주황색 context action경고가 표시됩니다.  
+
+## Form
+form 태그`<form></form>`를 사용하여 데이터를 받아올 경우에는 Form 클래스를 사용해야합니다.  
+```python
+from fastapi import Form
+
+@app.post("/form/")
+async def form(form_data: str = Form()):
+    return form_data
+```
+form 클래스는 body클래스를 상속받았습니다.  
+`Content-Type`은 `application/x-www-form-urlencoded`을 사용해야합니다.  
