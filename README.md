@@ -480,3 +480,47 @@ async def form(form_data: str = Form()):
 ```
 form 클래스는 body클래스를 상속받았습니다.  
 `Content-Type`은 `application/x-www-form-urlencoded`을 사용해야합니다.  
+
+## File, UploadFile
+`File`은 Form에서 상속받은 클래스입니다.  
+매개변수가 쿼리나 body로 받는것을 방지하기위해 File()로 사용합니다.  
+```python
+from fastapi import File
+
+@app.post("/file/")
+async def create_file(file: bytes = File()):
+    return {"file_size": len(file)}
+```
+`UploadFile`은 동영상, 이미지 등 대용량 파일을 메모리를 소모하지 않고 처리하기에 적합합니다.  
+UploadFile의 Attribute는
+* `filename`: str로 파일명.
+* `content_type`: str로 MIME type/media type.
+* `file`: `SpooledTemporaryFile`객체입니다.
+```python
+from fastapi import UploadFile
+
+@app.post("/uploadfile/")
+async def upload_file(file: UploadFile):
+    return {"filename": file.filename}
+```
+UploadFile의 메소드를 이용해 파일을 제어할 수 있습니다.
+* `write(data)`: data(str이나 bytes)를 파일에 작성합니다.
+* `read(size)`: 파일 사이즈 또는 글자의 사이즈를 읽습니다.
+* `seek(offset)`: 파일 내부의 offset위치의 파이트로 이동합니다.
+* `close()`: 파일을 닫습니다.
+
+위 메소드 들은 모두 `async` 메소드로 `await`과 함께 사용하여야합니다.  
+```python
+@app.post("/readfile/")
+async def read_file(file: UploadFile):
+    contents = file.file.read()
+```
+여러개의 파일을 받기 위해서는 list로 감싸주어야합니다.
+
+```python
+async def create_file(files: list[bytes] = File()):
+    ...
+
+async def upload_file(files: list[UploadFile]):
+    ...
+```
