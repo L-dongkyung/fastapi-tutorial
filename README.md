@@ -524,3 +524,5 @@ async def create_file(files: list[bytes] = File()):
 async def upload_file(files: list[UploadFile]):
     ...
 ```
+`File`과 `Form`을 함께 사용하여 선언할 수 있습니다.  
+하지만 요청의 `body`가 `multipart/form-data`의 http요청을 받기 때문에 `Body`파라미터는 사용할 수 없습니다.  
