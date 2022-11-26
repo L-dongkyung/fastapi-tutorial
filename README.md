@@ -526,3 +526,47 @@ async def upload_file(files: list[UploadFile]):
 ```
 `File`과 `Form`을 함께 사용하여 선언할 수 있습니다.  
 하지만 요청의 `body`가 `multipart/form-data`의 http요청을 받기 때문에 `Body`파라미터는 사용할 수 없습니다.  
+
+## Error Handling
+HTTPException 이용해서 raise를 발생시켜 에러를 일으킬 수 있습니다.
+```python
+from fastapi import FastAPI, HTTPException
+
+app = FastAPI()
+
+items = {"foo": "The Foo Wrestlers"}
+
+
+@app.get("/items/{item_id}")
+async def read_item(item_id: str):
+    if item_id not in items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"item": items[item_id]}
+```
+응답으로는 `404`,`{"detail": "Item not found"}`을 받습니다.  
+`headers`파라미터를 통해 `dict`에 응답 헤더를 추가할 수 있습니다.  
+app에 exceprion_handler를 통해서 error처리를 등록하는 방법이 있습니다.  
+```python
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
+class UnicornException(Exception):
+    def __init__(self, name: str):
+        self.name = name
+
+app = FastAPI()
+
+@app.exception_handler(UnicornException)
+async def unicorn_exception_handler(request: Request, exc: UnicornException):
+    return JSONResponse(
+        status_code=418,
+        content={"message": f"Oops! {exc.name} did something. There goes a rainbow..."},
+    )
+
+@app.get("/unicorns/{name}")
+async def read_unicorn(name: str):
+    if name == "yolo":
+        raise UnicornException(name=name)
+    return {"unicorn_name": name}
+```
+하지만 app에 직접 등록하고 따로 관리하기 힘든 부분이 보여 차후에 error를 따로 관리 할 수 있는 방법을 찾아 정리하겠습니다.  

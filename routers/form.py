@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Form, File, UploadFile
 
 router = APIRouter(
-    prefix='form'
+    prefix='/form'
 )
 
 @router.post('/login/')
