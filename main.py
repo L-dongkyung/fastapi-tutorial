@@ -3,9 +3,20 @@ from enum import Enum
 import uvicorn
 from fastapi import FastAPI
 
-from routers import body, path_parameter, query_parameter, cookie, headers, response, form, errors_handling
+from routers import (
+    body,
+    path_parameter,
+    query_parameter,
+    cookie,
+    headers,
+    response,
+    form,
+    errors_handling,
+    path_operation_conf
+)
 
 app = FastAPI()
+
 
 @app.get("/")
 async def root():
@@ -19,6 +30,7 @@ app.include_router(headers.router, tags=['headers'])
 app.include_router(response.router, tags=['response'])
 app.include_router(form.router, tags=['form'])
 app.include_router(errors_handling.router, tags=['error'])
+app.include_router(path_operation_conf.router, tags=['path_oper_conf'])
 
 
 if __name__ == '__main__':

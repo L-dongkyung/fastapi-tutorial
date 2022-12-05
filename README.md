@@ -570,3 +570,68 @@ async def read_unicorn(name: str):
     return {"unicorn_name": name}
 ```
 하지만 app에 직접 등록하고 따로 관리하기 힘든 부분이 보여 차후에 error를 따로 관리 할 수 있는 방법을 찾아 정리하겠습니다.  
+
+## Path Operation Configuration
+### Response Status Code
+엔드 포인트에 `status_code` 키워드를 이용해서 상태코드를 반환할 수 있습니다.  
+상태 코드는 `fastapi.status`와 `starlette.status` 모두 사용 가능합니다.  
+```python
+from fastapi import FastAPI, status
+
+app = FastAPI()
+
+@app.post("/items/", response_model=Item, status_code=status.HTTP_201_CREATED)
+async def create_item(item: Item):
+    return item
+```
+### Tags
+엔드포인트에 tags를 추가하여 분류할 수 있습니다.
+tags를 추가하는 위치는 세 곳에 위치해 있습니다.
+1. include_router
+2. APIRouter
+3. router.method
+
+세곳에 다른 tags로 설정할 경우 해당 엔드포인트는 docs에서 여러개 존재 할 수 있습니다.  
+또한 Enum을 통해서 클래스로 정의하여 사용할 수 있습니다.
+```python
+from enum import Enum
+
+class Tags(Enum):
+    items = "items"
+    users = "users"
+
+@app.get("/items/", tags=[Tags.items])
+def func():
+    ...
+```
+### Summary and description
+엔드포인트에 대한 설명을 `summary`와 `description`옵션으로 추가할 수 있습니다.  
+```python
+@app.post(
+    "/items/",
+    summary="Create an item",
+    description="Create an item with all the information, name, description, price, tax and a set of unique tags",
+)
+async def create_item(item):
+    return item
+```
+`summary`가 없을 경우 기본값은 함수명이 입력됩니다.  
+`description`은 docstring으로 대체할 수 있습니다.  
+설명이 여러 줄이고 복잡할 경우 docstring을 추천합니다. 또한, Markdown형식으로 입력할 수 있습니다.  
+### Response description
+`response_description`을 이용해서 응답에 대한 설명을 추가할 수 있습니다.  
+기본 값은 fastapi가 자동적으로 성공적인 응답 중 하나를 표시합니다.
+```python
+@app.post(
+    "/items/",
+    summary="Create an item",
+    response_description="The created item"
+)
+async def create_item(item):
+    return item
+```
+### Deprecate a path operation
+사용하지 않는 엔드포인트는 별도로 표시를 하거나 완전 삭제하는 것이 좋습니다.  
+`deprecated`를 사용하여 사용하지 않는다고 표시 할 수 있지만,
+docs를 통해서 요청 테스트는 진행 할 수 있습니다.  
+
