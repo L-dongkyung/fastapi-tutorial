@@ -635,3 +635,6 @@ async def create_item(item):
 `deprecated`를 사용하여 사용하지 않는다고 표시 할 수 있지만,
 docs를 통해서 요청 테스트는 진행 할 수 있습니다.  
 
+## JSON Compatible Encoder
+`jsonable_encoder`함수를 이용해서 pydantic 모델로 전달받은 파라미터를 `dict`형태로 변환할 수 있습니다.  
+이를 이용해서 DB에 저장하거나 `json.dumps()`로 인코딩하여 별도의 처리를 할 수 있습니다.

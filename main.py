@@ -12,7 +12,8 @@ from routers import (
     response,
     form,
     errors_handling,
-    path_operation_conf
+    path_operation_conf,
+    encode_json,
 )
 
 app = FastAPI()
@@ -31,6 +32,7 @@ app.include_router(response.router, tags=['response'])
 app.include_router(form.router, tags=['form'])
 app.include_router(errors_handling.router, tags=['error'])
 app.include_router(path_operation_conf.router, tags=['path_oper_conf'])
+app.include_router(encode_json.router, tags=['encode_json'])
 
 
 if __name__ == '__main__':
