@@ -638,3 +638,48 @@ docs를 통해서 요청 테스트는 진행 할 수 있습니다.
 ## JSON Compatible Encoder
 `jsonable_encoder`함수를 이용해서 pydantic 모델로 전달받은 파라미터를 `dict`형태로 변환할 수 있습니다.  
 이를 이용해서 DB에 저장하거나 `json.dumps()`로 인코딩하여 별도의 처리를 할 수 있습니다.
+
+## Body - Updates
+### HTTP PUT Method
+`PUT`을 이용하여 데이터를 수정할 수 있습니다.  
+이 과정에서 pydantic 모델의 내용을 위의 `jsonable_encoder`를 이용해서 `dict` 형식으로 변환하면 파라미터 처리가 용이합니다.  
+```python
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+
+class Item(BaseModel):
+    ...
+
+@app.put('/update/')
+async def update_item(item: Item):
+    update_datas = jsonable_encoder(item)
+    updated_item = Item(**update_datas)
+    updated_item.save()
+    return update_item
+```
+### HTTP PATCH Method
+`PATCH`를 이용하여 부분적으로 데이터를 수정할 수 있습니다.  
+방법은 위의 `PUT`과 유사하지만 수정이 필요한 데이터만 부분적으로 변경해야합니다.  
+pydantic 모델에서 존재하는 필드만 가져오는 `exclude_unset`을 사용합니다.  
+`exclude_unset`에 대한 설명은 [response model - parameter](#response-model)의 `Parameter로 출력 데이터 선택`를 참고하면 좋을 것입니다.  
+```python
+from pydantic import BaseModel
+
+class Item(BaseModel):
+    ...
+
+@router.patch('/little_update/{item_id}')
+async def little_update(item_id: int, item: Item):
+    update_datas = item.dict(exclude_unset=True)
+    # update db
+    origin_item = db.get(item_id)
+    origin_item.update(**update_datas)
+    return origin_item
+    
+```
+
+### Pydantic model's update parameter
+pydantic model `.copy()` 함수의 파라미터로 `update`를 사용하여 데이터를 수정할 수 있습니다.  
+공식문서에서는 이렇게 데이터를 수정할 수 있다고 하지만 DB를 수정해야할 경우에는 ORM을 이용해서 수정하는 것이 안전할 것으로 예상됩니다.
+
+또한, 부분 업데이트를 수행할 경우 추가 pydantic model(ex. ItemUpdate)을 선언하여 기본값을 지정하여주는것이 좋습니다.  
