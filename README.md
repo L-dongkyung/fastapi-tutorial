@@ -683,3 +683,48 @@ pydantic model `.copy()` 함수의 파라미터로 `update`를 사용하여 데�
 공식문서에서는 이렇게 데이터를 수정할 수 있다고 하지만 DB를 수정해야할 경우에는 ORM을 이용해서 수정하는 것이 안전할 것으로 예상됩니다.
 
 또한, 부분 업데이트를 수행할 경우 추가 pydantic model(ex. ItemUpdate)을 선언하여 기본값을 지정하여주는것이 좋습니다.  
+
+## Dependencies
+### Dependency Injection
+의존성 주입은 프로그래밍에서 코드가 작동하는데 필요한 항목을 선언하는 방법입니다.  
+의존성 주입은 다음의 경우에 유용합니다.
+* 논리를 공유
+* 데이터베이스 공유
+* 보안, 인증, 역할 요구사항 시행
+```python
+async def depends_injection(q: str = None, skip: int = 0, limit: int = 100):
+    return {"q": q, "skip": skip, "limit": limit}
+```
+각 파라미터에 자료형이 지정되어 있고, 기본값이 설정되어 있습니다.  
+이것이 종속성(Dependency)을 부여한 것입니다.  
+### Depends
+`Depends`함수를 임포트 하여 엔드포인트의 기본값으로 선언하면 의존성 주입이 됩니다.  
+```python
+from fastapi import Depends, FastAPI
+
+app = FastAPI()
+
+
+async def depends_injection(q: str = None, skip: int = 0, limit: int = 100):
+    return {"q": q, "skip": skip, "limit": limit}
+
+
+@app.get("/items/")
+async def read_items(commons: dict = Depends(depends_injection)):
+    return commons
+
+
+@app.get("/users/")
+async def read_users(commons: dict = Depends(depends_injection)):
+    return commons
+```
+Depends의 파라미터로는 단일 함수만 전달합니다.  
+위 예에서는 아래의 요청을 통해서 정상적으로 Depends의 함수에 파라미터가 입력되어 응답을 받는 것을 확인 할 수 있습니다.  
+```bash
+curl -X 'GET' 'http://127.0.0.1:8000/items/?q=qw&skip=1&limit=12' \
+    -H 'accept: application/json'
+```
+이 의존성을 이용하여 코드의 재사용성을 향상 시킬수 있습니다.  
+또한, `async def`와 `def` 두 함수 선언을 모두 사용할 수 있습니다.  
+
+계층적 종속성 주입이 가능하고, 모든 각 계층별 종속성을 만족한 후에 각 단계에서 결과를 반환합니다.  
