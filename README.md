@@ -728,3 +728,50 @@ curl -X 'GET' 'http://127.0.0.1:8000/items/?q=qw&skip=1&limit=12' \
 또한, `async def`와 `def` 두 함수 선언을 모두 사용할 수 있습니다.  
 
 계층적 종속성 주입이 가능하고, 모든 각 계층별 종속성을 만족한 후에 각 단계에서 결과를 반환합니다.  
+
+### Classes as Dependencies
+위에서는 함수를 이용해서 종속성을 주입하였습니다.  
+함수 대신에 클래스를 이용해서 종속성을 주입할 수 있습니다.
+```python
+from fastapi import Depends, FastAPI
+
+app = FastAPI()
+fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
+
+class CommonQueryParams:
+    def __init__(self, q: str = None, skip: int = 0, limit: int = 100):
+        self.q = q
+        self.skip = skip
+        self.limit = limit
+
+@app.get("/items/")
+async def read_items(commons: CommonQueryParams = Depends(CommonQueryParams)):
+    response = {}
+    if commons.q:
+        response.update({"q": commons.q})
+    items = fake_items_db[commons.skip : commons.skip + commons.limit]
+    response.update({"items": items})
+    return response
+```
+클래스를 이용하여 종속성을 주입하려면 클래스의 **생성자(\_\_init\_\_)** 정의에 유의해야합니다.  
+
+클래스를 이용해서 종속성을 주입하는 방법은 여러가지가 있습니다.
+
+```python
+# 1.
+async def read_items(commons=Depends(CommonQueryParams)):
+    pass
+# 2.
+async def read_items(commons: CommonQueryParams = Depends(CommonQueryParams)):
+    pass
+# 3.
+async def read_items(commons: CommonQueryParams = Depends()):
+    pass
+```
+1, 2, 3번 방법 모두 종속성을 주입하는 방법이고 FastAPI가 이해할 수 있습니다.  
+하지만 1번의 경우 파라미터의 타입정의가 없습니다.  
+2번의 경우 클래스를 중복으로 작성되어있습니다.  
+1번과 2번의 방법보다 3번의 방법을 이용하는 것이 유용합니다.  
+3번은 파라미터의 타입정의가 되어있고 `Depends()`는 `Depends(CommonQueryParams)`과 같은 의미를 내포하고 있습니다.  
+
+종속성을 클래스로 정의하는 것은 생성자를 통해 새로운 인스턴스를 생성하는 것이기 때문에 사용에 유의해야할 것으로 예상합니다.  
