@@ -775,3 +775,34 @@ async def read_items(commons: CommonQueryParams = Depends()):
 3번은 파라미터의 타입정의가 되어있고 `Depends()`는 `Depends(CommonQueryParams)`과 같은 의미를 내포하고 있습니다.  
 
 종속성을 클래스로 정의하는 것은 생성자를 통해 새로운 인스턴스를 생성하는 것이기 때문에 사용에 유의해야할 것으로 예상합니다.  
+
+### Sub-dependencies
+하위 종속성을 정의할 수 있습니다.  
+종속성에 종속성을 부여하는 관계를 정의하여 하위 종속성을 구현할 수 있습니다.  
+```python
+from fastapi import Cookie, Depends, FastAPI
+
+app = FastAPI()
+
+
+def query_extractor(q: str = None):
+    return q
+
+
+def query_or_cookie_extractor(
+    q: str = Depends(query_extractor), last_query: str = Cookie(default=None)
+):
+    if not q:
+        return last_query
+    return q
+
+
+@app.get("/items/")
+async def read_query(query_or_default: str = Depends(query_or_cookie_extractor)):
+    return {"q_or_cookie": query_or_default}
+```
+엔드포인트에서 종속성이 주입되고 해당 종속함수에서 또다른 종속성이 주입되어 있습니다.  
+이렇게 간단하게 하위 종속을 주입할 수 있고 사용할 수 있습니다.  
+또한 **동일한 종속을 여러번 사용**해야할 경우 캐시에 저장합니다.  
+캐시에 저장하지 않으려면 `Depends()`에 `use_cache`를 `False`로 설정해야합니다.  
+

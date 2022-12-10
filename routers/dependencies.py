@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends
-
+from fastapi import APIRouter, Depends, Cookie
 
 router = APIRouter(
     prefix='/depends'
@@ -38,3 +37,20 @@ async def read_items(commons: CommonQueryParams = Depends(CommonQueryParams)):
     items = fake_items_db[commons.skip:commons.skip + commons.limit]
     response.update({"items": items})
     return response
+
+
+def query_extractor(q: str = None):
+    return q
+
+
+def query_or_cookie_extractor(
+    q: str = Depends(query_extractor), last_query: str = Cookie(default=None)
+):
+    if not q:
+        return last_query
+    return q
+
+
+@router.get("/sub/items/")
+async def read_query(query_or_default: str = Depends(query_or_cookie_extractor)):
+    return {"q_or_cookie": query_or_default}
