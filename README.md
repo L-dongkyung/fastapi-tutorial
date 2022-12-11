@@ -806,3 +806,24 @@ async def read_query(query_or_default: str = Depends(query_or_cookie_extractor))
 또한 **동일한 종속을 여러번 사용**해야할 경우 캐시에 저장합니다.  
 캐시에 저장하지 않으려면 `Depends()`에 `use_cache`를 `False`로 설정해야합니다.  
 
+### Dependencies in path operation decorators
+종속성을 path 정의와 함께 선언할 수 있습니다.  
+path에서 함께 선언하는 경우 함수의 반환 값은 사용할 수 없지만, 함수의 내부 블록을 실행합니다.
+
+```python
+from fastapi import Depends
+
+
+def func1(q: str):
+    ...
+
+def func2(id: int):
+    ...
+
+@app.get("/items/", dependencies=[Depends(func1), Depends(func2)])
+async def func():
+    ...
+```
+path 종속성도 인수의 요구사항을 충족해야하며 내부에서 에러를 발생시킬수 있습니다.  
+return 값이 있어도 반환 값을 사용하지 않습니다.  
+이를 이용해서 다른 함수를 종속하여 사용할 수 있습니다.  
