@@ -827,3 +827,18 @@ async def func():
 path 종속성도 인수의 요구사항을 충족해야하며 내부에서 에러를 발생시킬수 있습니다.  
 return 값이 있어도 반환 값을 사용하지 않습니다.  
 이를 이용해서 다른 함수를 종속하여 사용할 수 있습니다.  
+### Global Dependencies
+일부 프로그램에서는 app 전체에 종속성을 부여해야할 필요가 있습니다.  
+fastapi에서는 프로그램 전체에도 종속성을 주입할 수 있습니다.
+```python
+from fastapi import Depends, FastAPI
+
+async def depend_func1():
+    pass
+
+async def depend_func2():
+    pass
+
+app = FastAPI(dependencies=[Depends(depend_func1), Depends(depend_func2)])
+```
+app전체 프로그램에 의존성을 주입하는 것과 미들웨어를 추가하는 것에 대해서는 확인이 필요해보입니다.  
