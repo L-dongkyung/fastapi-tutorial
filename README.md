@@ -842,3 +842,73 @@ async def depend_func2():
 app = FastAPI(dependencies=[Depends(depend_func1), Depends(depend_func2)])
 ```
 app전체 프로그램에 의존성을 주입하는 것과 미들웨어를 추가하는 것에 대해서는 확인이 필요해보입니다.  
+
+### Dependencies with yield
+`yield`를 이용해서 종속 완료후 처리 단계를 추가할 수 있습니다.  
+공식문서에서는 DB Session에 대해 설명되어 있고 이 종속성은 많이 사용되어 중요하다고 생각합니다.  
+```python
+async def get_db():
+    db = DBSession()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+종속성 주입으로 `yield`의 값이 반환값이 경로(path operation)에서 사용되고,
+경로의 작업이 완료(응답의 전달)되면 `finally`를 이용해서 이후 처리를 진행합니다.  
+`try`문을 사용하여 종속성을 사용하는 동안에 발생하는 모든 예외를 받을 수 있습니다.  
+그리고 예외가 발생하여도 `finally`를 이용하여 종속성을 안전하게 마무리할 수 있습니다.  
+또한, 하위 종속에 `yield`를 사용할 수 있습니다. 아래의 예시 코드를 첨부하였습니다.  
+```python
+from fastapi import Depends
+
+
+async def dependency_a():
+    dep_a = generate_dep_a()
+    try:
+        yield dep_a
+    finally:
+        dep_a.close()
+
+
+async def dependency_b(dep_a=Depends(dependency_a)):
+    dep_b = generate_dep_b()
+    try:
+        yield dep_b
+    finally:
+        dep_b.close(dep_a)
+
+
+async def dependency_c(dep_b=Depends(dependency_b)):
+    dep_c = generate_dep_c()
+    try:
+        yield dep_c
+    finally:
+        dep_c.close(dep_b)
+```
+`yield`와 `return`은 필요에 따라 사용할 수 있으며, `async def`와 `def`도 필요에 따라 선택할 수 있습니다.  
+
+#### `HTTPException`을 사용할 경우 주의해야할 사항이 있습니다.  
+`HTTPException`을 이용해서 응답을 보낼 경우에는 `yield`가 작동하지 않을 수 있습니다.  
+**Exception Handlers**는 계속 실행 중이고, 응답 코드를 전송한 후에 `yield`가 실행되어 종료되지 않을 수 있습니다.  
+따라서 `yield`이후에 `HTTPException`예외가 발생하면 기본 예외 또는 사용자 예외를 통해 처리하고 400 응답코드를 전송해야합니다.  
+
+#### `with`구문을 통해서 같은 `yield`를 수행할 수 있습니다.  
+```python
+class MySuperContextManager:
+    def __init__(self):
+        self.db = DBSession()
+
+    def __enter__(self):
+        return self.db
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.db.close()
+
+
+async def get_db():
+    with MySuperContextManager() as db:
+        yield db
+```
+클래스의 `__enter__`와 `__exit__`을 이용하여 `yield`의 실행과 종료를 수행할 수 있습니다.  
+

@@ -1,3 +1,5 @@
+import time
+
 from fastapi import APIRouter, Depends, Cookie, HTTPException, Header
 
 router = APIRouter(
@@ -70,3 +72,25 @@ async def verify_key(x_key: str = Header()):
 @router.get("/path_depend_items/", dependencies=[Depends(verify_token), Depends(verify_key)])
 async def read_items():
     return [{"item": "Foo"}, {"item": "Bar"}]
+
+
+class DBSession:
+    def __init__(self):
+        ...
+
+    def close(self):
+        print('db session close')
+
+async def get_db():
+    db = DBSession()
+    try:
+        print('get db session')
+        yield db
+    finally:
+        db.close()
+
+@router.get("/get_db/")
+async def get_db(session: DBSession = Depends(get_db)):
+    time.sleep(10)
+
+
