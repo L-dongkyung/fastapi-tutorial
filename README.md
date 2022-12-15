@@ -912,3 +912,6 @@ async def get_db():
 ```
 클래스의 `__enter__`와 `__exit__`을 이용하여 `yield`의 실행과 종료를 수행할 수 있습니다.  
 
+## Security
+fastapi는 security를 통해 보안에 대해 정의할 수 있습니다.  
+이를 통해서 보안, 인증, 권한처리를 구현할 것이고 `OAuth2`, `OpenAPI`, `JWT`에 대해서 서술할 것입니다.  
