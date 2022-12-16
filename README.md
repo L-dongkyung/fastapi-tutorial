@@ -915,3 +915,18 @@ async def get_db():
 ## Security
 fastapi는 security를 통해 보안에 대해 정의할 수 있습니다.  
 이를 통해서 보안, 인증, 권한처리를 구현할 것이고 `OAuth2`, `OpenAPI`, `JWT`에 대해서 서술할 것입니다.  
+
+### Security First Steps
+보안을 위해서 `Authorize` 인증을 수행합니다.  
+```python
+from fastapi import FastAPI, Depends
+from fastapi.security import OAuth2PasswordBearer
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+@app.get("/items/")
+async def read_items(token: str = Depends(oauth2_scheme)):
+    return {"token": token}
+```
+`bearer`토큰을 사용하기 위해 `OAuth2PasswordBearer`의 이용해서 종속성을 주입하면 `Authorize`를 수행해야합니다.  
+인증을 위해서는 유저가 있는지 확인해야하고 유저를 검증해야합니다.
