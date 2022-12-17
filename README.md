@@ -930,3 +930,34 @@ async def read_items(token: str = Depends(oauth2_scheme)):
 ```
 `bearer`토큰을 사용하기 위해 `OAuth2PasswordBearer`의 이용해서 종속성을 주입하면 `Authorize`를 수행해야합니다.  
 인증을 위해서는 유저가 있는지 확인해야하고 유저를 검증해야합니다.
+
+유저확인을 위해 토큰으로 유저를 확인하는 코드이지만, 이번에는 유저를 생성하고 그 응답을 받습니다.  
+```python
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+class User(BaseModel):
+    username: str
+    email: str = None
+    full_name: str = None
+    disabled: bool = None
+
+def fake_decode_token(token):
+    return User(
+        username=token + "fakedecoded", email="john@example.com", full_name="John Doe"
+    )
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    user = fake_decode_token(token)
+    return user
+
+
+@app.get("/users/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+```
+이제 token을 받아오는 엔드포인트를 작성해야 합니다.  
