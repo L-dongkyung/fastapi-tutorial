@@ -961,3 +961,42 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 ```
 이제 token을 받아오는 엔드포인트를 작성해야 합니다.  
+```python
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordRequestForm
+
+@app.post("/token/")
+async def get_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    return {"access_token": form_data.username, "token_type": "bearer"}
+```
+`fastapi.security`에서 `OAuth2PasswordRequestForm`클래스를 종속성으로 주입합니다.  
+`OAuth2PasswordRequestForm`의 매개변수로는 아래의 항목이 있습니다.  
+* `username` : 필수요소.
+* `password` : 필수요소.
+* `scope` : 선택요소.
+* `grant_type` : 선택요소.
+* `client_id` : 선택요소.
+* `client_secret` : 선택요소.
+ 
+_`grant_type`은 OAuth2의 spec에 요구되지만 `OAuth2PasswordRequestForm`에서는 선택사항입니다.  
+만약 필수요소로 추가하고 싶다면 `OAuth2PasswordRequestFormStrict`을 사용하면 됩니다._  
+
+그리고 그 데이터를 처리하여야 하지만 이번에는 유저이름을 토큰으로 반환합니다.  
+응답으로는 `access_token`과 `token_type`을 가지고 있어야하며 `JSON`타입이어야 합니다.  
+
+필요한 경우 `OAuth2PasswordRequestForm`대신에 `Form`파라미터를 이용해서 직접 정의하여 사용할 수 있습니다.
+> ```python
+> async def get_current_user(token: str = Depends(oauth2_scheme)):
+>     user = fake_decode_token(token)
+>     if not user:
+>         raise HTTPException(
+>             status_code=status.HTTP_401_UNAUTHORIZED,
+>             detail="Invalid authentication credentials",
+>             headers={"WWW-Authenticate": "Bearer"},
+>         )
+>     return user
+> ```
+> 401 "UNAUTHORIZED" status code에는 헤더에 `WWW-Authenticate`항목을 추가하는 것이 좋습니다.  
+> 이것은 표준 사용법에 의한 것으로 미래의 나 또는 다른 개발자가 사용할 수 있습니다.
+
+
