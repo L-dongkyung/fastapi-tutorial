@@ -999,4 +999,142 @@ _`grant_type`은 OAuth2의 spec에 요구되지만 `OAuth2PasswordRequestForm`�
 > 401 "UNAUTHORIZED" status code에는 헤더에 `WWW-Authenticate`항목을 추가하는 것이 좋습니다.  
 > 이것은 표준 사용법에 의한 것으로 미래의 나 또는 다른 개발자가 사용할 수 있습니다.
 
+### OAuth2 with Password (and hashing), Bearer with JWT tokens
+사용자를 저장할 때에는 비밀번호를 암호화하여 저장해야합니다.  
+암호화를 하기 위한 라이브러리를 설치합니다.  
+```bash
+$ pip install "passlib[bcrypt]"
+```
+`CryptContext`클래스를 이용해서 비밀번호를 암호화 합니다.  
+```python
+from passlib.context import CryptContext
+from pydantic import BaseModel
 
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_user(db, username: str):
+    if username in db:
+        user_dict = db[username]
+        return UserInDB(**user_dict)
+
+def authenticate_user(fake_db, username: str, password: str):
+    user = get_user(fake_db, username)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+
+class User(BaseModel):
+    username: str
+    email: str  = None
+    full_name: str = None
+    disabled: bool = None
+
+
+class UserInDB(User):
+    hashed_password: str
+```
+`CryptContext`를 이용해서 암호를 Hash로 변환하고 검증할 수 있습니다.  
+그리고 유저가 입력한 비밀번호와 hash 비밀번호를 확인하여 맞을 경우에만 해당 유저의 데이터를 반환합니다.  
+
+jwt를 이용해서 토큰을 생성하고 유저의 정보를 확인 할 수 있습니다.  
+jwt는 세 부분으로 구성되어 있는데 **Header, Payload, Signature**입니다.  
+다시 Signature는 Header, Payload, Private Key의 조합으로 구성합니다.  
+jwt를 사용하기 위해서는 라이브러리를 설치해야합니다.
+```bash
+$ pip install "python-jose[cryptography]"
+```
+jwt는 secret_key, algorithm을 정의하고 이를 조합하여 token을 생성합니다.  
+이를 정의하고 절대로 공개되면 안됩니다.  
+```python
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+ALGORITHM = "HS256"
+```
+여기서는 `$ openssl rand -hex 32`를 통해서 랜덤키를 생성하였습니다.  
+```python
+from datetime import datetime, timedelta
+
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError, jwt
+from pydantic import BaseModel
+
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    username: str = None
+    
+
+fake_users_db = {}
+
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
+    user = get_user(fake_users_db, username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if current_user.disabled:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(fake_users_db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=30)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+```
+`jwt.encode`에 `dict`타입의 데이터와 secret_key, algoritm을 전달하면 token이 생성됩니다.  
+이를 전달하고 사용할 때마다 `jwt.decode`를 이용해서 사용자를 확인하면 됩니다.
