@@ -1137,4 +1137,46 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer"}
 ```
 `jwt.encode`에 `dict`타입의 데이터와 secret_key, algoritm을 전달하면 token이 생성됩니다.  
-이를 전달하고 사용할 때마다 `jwt.decode`를 이용해서 사용자를 확인하면 됩니다.
+이를 전달하고 사용할 때마다 `jwt.decode`를 이용해서 사용자를 확인하면 됩니다.  
+
+## Middleware
+미들웨어는 요청이 있을 경우에 실행합니다.  
+요청이 들어오는 경우 해당 요청의 함수를 실행하기 전/후로 요청 및 응답에 대한 처리를 수행할 수 있습니다.  
+미들웨어를 수행하기 위해서는 `app.middleware`를 사용합니다.
+```python
+import time
+
+from fastapi import FastAPI, Request
+
+app = FastAPI()
+
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
+```
+`call_next`를 이용해서 다음 미들웨어 또는 함수로 실행을 진행 할 수 있고,  
+결과 값이 `response`로 전달되어 응답에 대한 처리를 수행할 수 있습니다.  
+또한 사용자 정의 클래스를 이용해서 middleware를 구성할 수 있습니다.  
+```python
+from starlette.datastructures import URL, Headers
+from starlette.responses import PlainTextResponse, RedirectResponse, Response
+from starlette.types import ASGIApp, Receive, Scope, Send
+from fastapi import FastAPI
+
+class MiddleWare:
+    def __init__(self, app: ASGIApp, params):
+        ...
+
+    def __call__(self, scope: Scope, receive: Receive, send: Send):
+        ...
+
+app = FastAPI()
+
+app.add_middleware(MiddleWare)
+```
+위의 형식으로 사용자정의 클래스를 middleware로 정의하여 사용할 수 있습니다.
