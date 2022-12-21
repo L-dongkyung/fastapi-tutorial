@@ -1180,3 +1180,30 @@ app = FastAPI()
 app.add_middleware(MiddleWare)
 ```
 위의 형식으로 사용자정의 클래스를 middleware로 정의하여 사용할 수 있습니다.
+middleware는 정의된 순서대로 요청이 들어와 처리되고 순서의 반대로 응답이 처리되어 순서에 유의해야합니다.
+
+## CORS (Cross-Origin Resource Sharing)
+CORS는 교차 출처 자원 공유로 해석됩니다.  
+origin을 통해서 외부에서 서버의 자원을 활용하고 제어하는 허가를 확인합니다.  
+`origins`에 등록된 host만 서버의 자원을 활용할 수 있고 부가적으로 `methods`, `headers`, `credentials` 등을 확인 할 수 있습니다.  
+fastapi는 라이브러리로 지원해주고 middleware로 설정 가능합니다.
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
