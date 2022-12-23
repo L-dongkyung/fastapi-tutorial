@@ -1207,3 +1207,86 @@ app.add_middleware(
     allow_headers=["*"],
 )
 ```
+
+## SQL (Relational) Databases
+fastapi는 `SQLAlchemy`를 이용해서 Database와 연결합니다.  
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+```
+engine을 통해서 데이터베이스와 연결하고, sessionmaker로 요청마다 연결session을 만들어 데이터를 전송합니다.  
+declaratiove_base를 상속받아서 orm model을 생성합니다.  
+모델을 생성할 때에는
+```python
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+from .database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+
+    items = relationship("Item", back_populates="owner")
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+
+    owner = relationship("User", back_populates="items")
+```
+declarative_tive의 생성자를 import한 후에 클래스에 상속합니다.  
+그리고 `__tablename__`은 DB table 이름입니다.  
+각 field의 이름을 정하고 속성을 정의합니다.
+`relationship`은 연관 field로 외래키로 적용되어있는 row를 가질 수 있습니다.  
+Database에 테이블을 생성하는 방법은 직접 sql DDL문을 작성하여 생성할 수도 있고 orm을 이용하여 생성할 수 있습니다.  
+```python
+# models.py
+from database import Base  # declarative_base()
+
+# main.py
+import models
+from database import engine
+
+models.Base.metadata.create_all(bind=engine)
+```
+declarative_base 객체의 metadata에 create_all을 통해서 테이블을 생성 할 수 있습니다.  
+
+`Alembic`을 이용해서 migration을 진행 할 수 있습니다.  
+[Alembic Docs](https://alembic.sqlalchemy.org/en/latest/)공식문서를 통해서 확인하고 사용해야할 것으로 보입니다.  
+
+### DB model to pydantic
+DB에서 불러온 데이터를 응답으로 보낼 경우 `response_model`에 pydantic 모델을 정의합니다.  
+여기서 pydantic class는 DB모델의 변환을 허용해야합니다.  
+```python
+from pydantic import BaseModel
+
+class Item(BaseModel):
+    field1: str
+    field2: int
+    
+    class Config:
+        orm_mode = True
+```
+pydantic model에 `Config class`를 생성한 후에 `orm_mode`를 `True`로 설정하면 DB데이터를 pydantic모델로 변환 가능합니다.  
