@@ -1290,3 +1290,28 @@ class Item(BaseModel):
         orm_mode = True
 ```
 pydantic model에 `Config class`를 생성한 후에 `orm_mode`를 `True`로 설정하면 DB데이터를 pydantic모델로 변환 가능합니다.  
+
+## Bigger Applications - Multiple Files
+### APIRouter class
+엔드포인트를 한 파일에 정의할 경우 유지보수가 어렵습니다.  
+그래서 `APIRouter`를 이용해서 엔드포인트 들을 분할 하여 관리할 수 있습니다.  
+```python
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/sub-path")
+
+@router.post("/path")
+async def func():
+    return 
+```
+이미 코드에 이 클래스를 사용하여 나누어 관리하고 있습니다.  
+`APIRouter`는 `main:app`에 추가해야 접근이 가능합니다.  
+```python
+from fastapi import FastAPI
+import apirouter
+
+app = FastAPI()
+app.include_router('apirouter.router')
+```
+정의된 router를 import한 후에 `include_router`에 추가합니다.  
+`FastAPI`와 `APIRouter`는 모두 `prefix`, `tags`, `dependencies`, `responses`등의 옵션을 지정할 수 있습니다.  
