@@ -1315,3 +1315,32 @@ app.include_router('apirouter.router')
 ```
 정의된 router를 import한 후에 `include_router`에 추가합니다.  
 `FastAPI`와 `APIRouter`는 모두 `prefix`, `tags`, `dependencies`, `responses`등의 옵션을 지정할 수 있습니다.  
+
+## Background Tasks
+클라이언트는 응답을 받기 전에 작업이 완료될 때까지 기다릴 필요가 없는 작업에 유용합니다.  
+예를 들어 이메일 알림이나 길고 느린 데이터 처리 같은 작업입니다.  
+`BackgroudTasks`를 이용해서 비동기 작업을 수행합니다.
+```python
+from fastapi import BackgroundTasks, FastAPI
+
+app = FastAPI()
+
+
+def write_notification(email: str, message=""):
+    with open("log.txt", mode="w") as email_file:
+        content = f"notification for {email}: {message}"
+        email_file.write(content)
+
+
+@app.post("/send-notification/{email}")
+async def send_notification(email: str, background_tasks: BackgroundTasks):
+    background_tasks.add_task(write_notification, email, message="some notification")
+    return {"message": "Notification sent in the background"}
+```
+종속성 주입으로 사용할 경우 경로작업, 종속 함수, 하위 종속함수에서 모두 사용할 수 있습니다.  
+`add_task`를 통해 작업을 전달하면 fastapi가 작업을 실행합니다.  
+`starlette.background.BackgroundTask`를 이용할 수 있지만 fastapi의 `BackgroundTasks`사용을 권장합니다.  
+많은 백그라운드 처리가 필요한 경우 `Celery`사용을 권장합니다.  
+celery사용법은 나중에 기술하겠습니다.
+
+

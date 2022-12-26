@@ -19,6 +19,7 @@ from routers import (
     update,
     dependencies,
     security,
+    background,
 )
 
 app = FastAPI()
@@ -58,6 +59,7 @@ app.include_router(encode_json.router, tags=['encode_json'])
 app.include_router(update.router, tags=['update_db'])
 app.include_router(dependencies.router, tags=['depends'])
 app.include_router(security.router, tags=['security'])
+app.include_router(background.router, tags=['background'])
 
 
 if __name__ == '__main__':
