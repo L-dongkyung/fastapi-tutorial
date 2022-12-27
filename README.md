@@ -1343,4 +1343,91 @@ async def send_notification(email: str, background_tasks: BackgroundTasks):
 많은 백그라운드 처리가 필요한 경우 `Celery`사용을 권장합니다.  
 celery사용법은 나중에 기술하겠습니다.
 
+## Metadata and Docs URLs
+### Metadata
+app에 대한 metadata 제목, 설명, 라이센스, 작성자 등을 작성할 수 있습니다.  
+app선언에 파라미터로 입력합니다.  
+* `title`: str. app 제목.
+* `description`: str. app에 대한 설명.
+* `version`: str. app 버전.
+* `terms_of_service`: url. 서비스 이용약관.
+* `contact`: {'name': <str>, 'url': <url>, 'email': <email>}. 작성자 이름 및 정보.
+* `license_info`: {'name': <str>, 'url': <url>}. 라이센스 정보.  
+```python
+from fastapi import FastAPI
 
+description = """
+ChimichangApp API helps you do awesome stuff. 🚀
+
+## Items
+
+You can **read items**.
+
+## Users
+
+You will be able to:
+
+* **Create users** (_not implemented_).
+* **Read users** (_not implemented_).
+"""
+
+app = FastAPI(
+    title="ChimichangApp",
+    description=description,
+    version="0.0.1",
+    terms_of_service="http://example.com/terms/",
+    contact={
+        "name": "Deadpoolio the Amazing",
+        "url": "http://x-force.example.com/contact/",
+        "email": "dp@x-force.example.com",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+)
+```
+
+또한, tags에 대한 metadata를 정의할 수 있습니다.
+각 tag 별로 설명과 함께 연결된 url을 연결할 수 있습니다.  
+설명은 docs의 tags 이름 뒤에 설명이 있고, 오른쪽에 연결 url이 있습니다.  
+그리고 정의한 순서대로 docs의 tag 표시 순서가 정해집니다.
+```python
+from fastapi import FastAPI
+
+tags_metadata = [
+    {
+        "name": "users",
+        "description": "Operations with users. The **login** logic is also here.",
+    },
+    {
+        "name": "items",
+        "description": "Manage items. So _fancy_ they have their own docs.",
+        "externalDocs": {
+            "description": "Items external docs",
+            "url": "https://fastapi.tiangolo.com/",
+        },
+    },
+]
+
+app = FastAPI(openapi_tags=tags_metadata)
+```
+
+### OpenAPI URL
+docs의 기본 URL은 `<host>:<port>/openapi.json`입니다.  
+``매개변수를 이용해서 openapi주소를 변경할 수 있습니다.  
+```python
+from fastapi import FastAPI
+
+app = FastAPI(openapi_url="/api/v1/openapi.json")
+```
+openapi를 json 형식으로 받아올 수 있습니다.  
+
+### Docs, Redoc URL
+기본값은 docs는 `/docs`, redoc은 `/redoc`으로 설정되어 있습니다.  
+변경하기 위해서는 `docs_url`, `redoc_url`을 이용해 변경합니다.
+```python
+from fastapi import FastAPI
+
+app = FastAPI(docs_url="/documentation", redoc_url=None)
+```

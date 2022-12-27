@@ -22,7 +22,32 @@ from routers import (
     background,
 )
 
-app = FastAPI()
+# app info
+app_info = {
+    "title": "FastAPI Tutorial",
+    "description": "tiangolo's Fastapi documents tutorial",
+    "version": "0.0.1",
+    "contact": {
+        "name": "lee dongkyung",
+        "email": "ckldk91m@gmail.com"
+    },
+    "license_info": {"name": "None"}
+}
+
+# tags info
+tags_info = [
+    {"name": "background", "description": "background task tutorial"},
+    {
+        "name": "depends",
+        "description": "dependencies tutorial",
+        "externalDocs": {
+            "description": "tiangolo docs",
+            "url": "https://fastapi.tiangolo.com/ko/tutorial/dependencies/"
+        },
+    },
+]
+
+app = FastAPI(openapi_tags=tags_info, openapi_url="/api/tuto/docs", docs_url="/tuto/docs", redoc_url="/tuto/redoc", **app_info)
 
 
 @app.get("/")
