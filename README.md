@@ -1431,3 +1431,47 @@ from fastapi import FastAPI
 
 app = FastAPI(docs_url="/documentation", redoc_url=None)
 ```
+
+## Testing
+테스트를 진행할 때에는 `TestClient`클래스를 이용합니다.
+매개변수로 서버의 app을 전달하고 testclient에서 `GET`, `POST` 등의 요청을 보내 응답값으로 테스트를 진행합니다.
+```python
+from fastapi.testclient import TestClient
+
+from main import app
+
+client = TestClient(app)
+
+def test_read_main():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"msg": "Hello World"}
+```
+pytest를 통해서 테스트를 진행하는 것을 권장하며 파일과 함수가 `test_`로 시작해야합니다.  
+그리고 Method 구현 방식과 Class 구현 방식이 있습니다.  
+Method 구현 방식은 위의 방법으로 `test_`로 시작하는 함수를 정의합니다.  
+
+Class 구현 방식은 `Test`로 시작하는 클래스를 정의하고 그 내부에 함수를 정의 할 수 있습니다.  
+Class 테스트를 진행하기 전/후로 사전 작업이 필요한 경우 `setup_class(cls)`, `teardown_class(cls)` 클래스 함수를 정의 할 수 있습니다.  
+이 두 함수는 `@classmethod`로 데코레이트 해야합니다.
+각 함수의 테스트 진행 전/후에도 사전 작업을 수행할 수 있습니다. `setup_method()`, `teardown_method()`를 정의하면 됩니다.  
+```python
+
+from fastapi.testclient import TestClient
+
+from main import app
+
+class TestMain:
+
+    @classmethod
+    def setup_class(cls):
+        cls.client = TestClient(app)
+
+    @classmethod
+    def teardown_class(cls):
+        ...
+
+    def test_read_main(self):
+        ...
+```
+
