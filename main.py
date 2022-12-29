@@ -20,6 +20,7 @@ from routers import (
     dependencies,
     security,
     background,
+    debug,
 )
 
 # app info
@@ -85,10 +86,11 @@ app.include_router(update.router, tags=['update_db'])
 app.include_router(dependencies.router, tags=['depends'])
 app.include_router(security.router, tags=['security'])
 app.include_router(background.router, tags=['background'])
+app.include_router(debug.router, tags=['debug'])
 
 
-if __name__ == '__main__':
-    uvicorn.run('main:app', reload=True)
+# if __name__ == '__main__':
+#     uvicorn.run('main:app', reload=True)
 
 
 

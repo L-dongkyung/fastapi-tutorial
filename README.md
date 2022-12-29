@@ -1475,3 +1475,30 @@ class TestMain:
         ...
 ```
 
+## Debug
+디버그는 개발 단계에서 데이터를 확인하기에 좋은 기능입니다.  
+작성한 코드의 결과값을 확인 할 수 있고, 에러가 발생한다면 직전까지 실행 후 입력 데이터를 확인 할 수 있습니다.  
+fastapi는 editor를 통해서 디버그를 쉽게 작동 할 수 있습니다.  
+먼저 서버를 cli가 아닌 editor에서 실행 할 수 있어야합니다.(pycharm은 다른 방법도 있습니다.)
+
+```python
+import uvicorn
+from fastapi import FastAPI
+from uvicorn
+
+app = FastAPI()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+`if __name__ == "__main__`을 통해서 파일 실행시 서버를 구동할 수 있게 합니다.  
+그리고 이 파일을 `debug`모드로 실행하면 됩니다.  
+원하는 위치에 브레이크포인트(빨간점)을 설정하고 Swagger, curl, postman 등을 통해 요청을 보내면 됩니다.  
+
+> pycharm에서는 `run/debug configuration`을 통해서 debug 및 run을 할 수 있습니다.  
+> 1. `+버튼(add new configuration)`을 누르고 `FastAPI`를 선택합니다.
+> 2. `Application file`을 FastAPI 클래스를 정의한 파일로 설정합니다.
+> 3. `Uvicorn options`에 필요한 옵션을 추가합니다.  
+> 
+> 이 방법으로 파일에 코드 입력 없이 실행 가능합니다.
+> 만약 배포를 cli로 실행할 경우에는 이 방법이 효율적일 수 있습니다.
