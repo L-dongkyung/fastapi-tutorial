@@ -152,3 +152,23 @@ async def create_item(request: Request):
 ```
 `yaml.safe_load()`를 통해서 body의 text를 dict로 변환합니다.  
 `parse_obj`는 인수가 dict일 경우 모델을 생성합니다.  dict가 아닐경우 error 발생.  
+
+## Additional Status Codes
+응답에 대한 추가적인 `status code`를 반한화기 위해서는 `JSONResponse` 또는 `Response`를 사용하면 됩니다.  
+```python
+from fastapi import Body, FastAPI, status
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+items = {"foo": {"name": "Fighters", "size": 6}, "bar": {"name": "Tenders", "size": 3}}
+
+@app.get("/items/{item_id}")
+async def read_item(item_id):
+    if item_id in items:
+        return items[item_id]
+    else:
+        JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=f"{item_id} not found")
+```
+`JSONResponse`를 통해서 다른 status code로 반환 할 수 있지만 OpenAPI에는 반영이 안되어 있습니다.  
+OpenAPI에 추가하는 방법을 찾았지만 공식문서에서 차후에 다루기 때문에 잠시 후에 작성하겠습니다. (Additional Responses in OpenAPI)
