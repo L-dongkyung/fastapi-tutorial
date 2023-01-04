@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.routing import APIRoute
 
-from routers.advanced.endpoint import operation_config, status_code
+from routers.advanced.endpoint import operation_config, status_code, direct_response
 
 router = APIRouter(
     prefix="/advanced"
@@ -9,6 +9,7 @@ router = APIRouter(
 
 router.include_router(operation_config.router, tags=["path_operation_config"])
 router.include_router(status_code.router, tags=["status code"])
+router.include_router(direct_response.router, tags=["direct_response"])
 
 
 # def use_route_names_as_operation_ids(router: APIRouter) -> None:

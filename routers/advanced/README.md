@@ -172,3 +172,52 @@ async def read_item(item_id):
 ```
 `JSONResponse`를 통해서 다른 status code로 반환 할 수 있지만 OpenAPI에는 반영이 안되어 있습니다.  
 OpenAPI에 추가하는 방법을 찾았지만 공식문서에서 차후에 다루기 때문에 잠시 후에 작성하겠습니다. (Additional Responses in OpenAPI)
+
+## Return a Response Directly
+경로의 응답값으로 `dict`, `list`, `pydantic model`, `database model` 등을 직접적으로 반환 할 수 있습니다.  
+FastAPI는 [JSON Compatible Encoder](https://fastapi.tiangolo.com/ko/tutorial/encoder/)에서 설명한 `jsonable_encoder`를
+통해서 변환한 데이터를 `JSONResponse`에 담아 응답을 전송할 수 있습니다.  
+또한, 이 JSON호환 데이터를 이용하여 사용자지정 헤더, 쿠키를 반환하는데 `JSONResponse`로 직접 응답을 보내는 것이 유용할 수 있습니다.  
+```python
+from fastapi import FastAPI, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class Item(BaseModel):
+    ...
+
+@app.put("/item/")
+async def read_item(item: Item):
+    json_item = jsonable_encoder(item)
+    return JSONResponse(status_code=status.HTTP_200_OK, content=json_item)
+```
+> database model의 경우 `Config`설정을 통해서 직접 응답에 입력할 수 있습니다.  
+> 하지만 pydantic model은 직접 응답에 전할 할 수 없고 `dict`로 변환하여 전달해야합니다.  
+> 그리고 `JSONResponse`는 `Response`를 상속받은 객체입니다.
+
+`Response`를 통해 직접 응답을 전달 할 수 있습니다.
+이를 통해 응답을 전달 할 경우 어떠한 변환을 하지 않고, 사용자의 의도대로 반환하기 때문에 유연성을 보장합니다.  
+모든 데이터유형을 반환하고 데이터 선언 또는 유효성 감사를 재정의 할 수 있습니다.
+```python
+from fastapi import FastAPI, Response
+
+app = FastAPI()
+
+
+@app.get("/legacy/")
+def get_legacy_data():
+    data = """<?xml version="1.0"?>
+    <shampoo>
+    <Header>
+        Apply shampoo here.
+    </Header>
+    <Body>
+        You'll have to use soap here.
+    </Body>
+    </shampoo>
+    """
+    return Response(content=data, media_type="application/xml")
+```
