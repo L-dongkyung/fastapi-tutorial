@@ -221,3 +221,124 @@ def get_legacy_data():
     """
     return Response(content=data, media_type="application/xml")
 ```
+
+## Custom Response - HTML, Stream, File, others
+###### 해당 파트는 코드로 작성하지 않았습니다. 설명에 fastapi 공식문서의 예제를 똑같이 옮겨왔습니다.
+사용자 지정 응답을 통해 다양한 응답을 반환할 수 있습니다.  
+`ORJSONResponse`, `HTMLResponse`, `Response`, `Custom Response` 등이 있습니다.  
+
+### `ORJSONResponse`
+성능을 극대화 하기 위해서 `orjson`을 사용하여 응답을 보낼 수 있습니다.  
+`orjson`은 파이썬 내장 `json`보다 성능적으로 우수한 것으로 알려져 있습니다.(특정 상황에 한정적일 수 있음.)  
+dict응답을 보낼 경우에 fastapi는 데이터를 jsonable한지 확인하는 과정에서 오버헤드가 발생합니다.  
+그래서 `jsonable_encoder`을 사용하여 json객체를 반환 하는 것이 성능적으로 우수합니다.  
+```python
+from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
+
+app = FastAPI()
+
+
+@app.get("/items/", response_class=ORJSONResponse)
+async def read_items():
+    return ORJSONResponse([{"item_id": "Foo"}])
+```
+
+### `HTMLResponse`
+HTML을 응답으로 보내야 할 경우 `HTMLResponse`를 사용하면 됩니다.
+```python
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+
+@app.get("/items/", response_class=HTMLResponse)
+async def read_items():
+    return """
+    <html>
+        <head>
+            <title>Some HTML in here</title>
+        </head>
+        <body>
+            <h1>Look ma! HTML!</h1>
+        </body>
+    </html>
+    """
+```
+또는 return에 `HTMLResponse`를 사용할 수도 있습니다.
+```python
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+
+@app.get("/items/")
+async def read_items():
+    html_content = """
+    <html>
+        <head>
+            <title>Some HTML in here</title>
+        </head>
+        <body>
+            <h1>Look ma! HTML!</h1>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content, status_code=200)
+```
+
+### `Response`
+`Respons`를 이용하여 다른 응답을 반환하거나 사용자 지정 응답을 사용할 수 있습니다.  
+매개변수는 아래와 같습니다.
+* `content`: `str` or `bytes`. 반환 데이터를 전달합니다.
+* `status_code`: `int`. 응답코드 번호를 입력합니다.
+* `headers`: `dict`. 헤더에 입력되는 데이터를 전달합니다.
+* `media_type`: `str`. 응답데이터의 유형을 전달합니다. (e.g. 'application/json')  
+
+FastAPI에서는 이 `Response`객체를 상속받아서 많은 응답 객체를 정의 하였습니다.
+* `HTMLResponse`
+* `PlainTextResponse`
+* `JSONResponse`
+* `ORJSONResponse`
+* `UJSONResponse`
+* `RedirectResponse`
+* `StreamingResponse`
+* `FileResponse`  
+이 객체들 모드 `fastapi.responses`에 위치해 있어 import 하여 사용할 수 있습니다.  
+
+### `Custom Response`
+응답을 직접 정의하여 사용할 수 있습니다.  
+`Response`객체를 상속받아 클래스를 정의 하고 `response_class`파라미터에 선언합니다.
+```python
+from typing import Any
+
+import orjson
+from fastapi import FastAPI, Response
+
+app = FastAPI()
+
+
+class CustomORJSONResponse(Response):
+    media_type = "application/json"
+
+    def render(self, content: Any) -> bytes:
+        assert orjson is not None, "orjson must be installed"
+        return orjson.dumps(content, option=orjson.OPT_INDENT_2)
+
+
+@app.get("/", response_class=CustomORJSONResponse)
+async def main():
+    return {"message": "Hello World"}
+```
+
+지금까지 다양한 사용자정의 응답에 대해서 서술하였습니다.  
+이 사용자 정의 응답을 기본값으로 정의 하기 위해서는 `default_response_class`를 정의합니다.  
+```python
+from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
+
+app = FastAPI(default_response_class=ORJSONResponse)
+```
+
