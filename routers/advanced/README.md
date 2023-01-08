@@ -342,3 +342,141 @@ from fastapi.responses import ORJSONResponse
 app = FastAPI(default_response_class=ORJSONResponse)
 ```
 
+## Additional Responses in OpenAPI
+위에서 응답을 바로 보내는 경우를 기술하였습니다.  
+하지만 Swagger(OpenAPI)에서는 반영을 별도로 추가해야합니다.  
+`responses`파라미터에 pydantic의 `BaseModel`을 이용해서 추가 할수 있습니다.  
+```python
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+
+class Item(BaseModel):
+    id: str
+    value: str
+
+
+class Message(BaseModel):
+    message: str
+
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}", response_model=Item, responses={404: {"model": Message}})
+async def read_item(item_id: str):
+    if item_id == "foo":
+        return {"id": "foo", "value": "there goes my hero"}
+    return JSONResponse(status_code=404, content={"message": "Item not found"})
+```
+BaseModel을 schema로 입력할 경우 OpenAPI는 아래와 같은 응답을 생성합니다.
+```bash
+"responses": {
+    "404": {
+        "description": "Additional Response",
+        "content": {
+            "application/json": {
+                "schema": {
+                    "$ref": "#/components/schemas/Message"
+                }
+            }
+        }
+    },
+```
+그리고 `"$ref": "#/components/schemas/Message"`이 schema는 OpenAPI 내부의 다른 위치를 참조합니다.  
+```bash
+{
+    "components": {
+        "schemas": {
+            "Message": {
+                "title": "Message",
+                "required": [
+                    "message"
+                ],
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "title": "Message",
+                        "type": "string"
+                    }
+                }
+            },
+            ...
+```
+
+저는 이전의 status_code를 공부하면서 직접 입력하는 경우를 작성하였습니다.  
+```bash
+# ./endpoint/status_code.py line:29
+responses={
+        "404": {
+            "description": "Not found item_id Response",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "text": {"type": "string"}
+                        }
+                    }
+                }
+            }
+        }
+    })
+```
+를 이용하여 직접 입력할 수 있습니다.  
+
+기존에 200 응답이 있는 경우 응답 유형을 추가 할 수 있습니다.  
+아래의 경우 기존의 `response_medel`을 응답으로 반환하는 경우와 `image/png`로 응답하는 경우 2가지입니다.
+```python
+@app.get(
+    "/items/{item_id}",
+    response_model=Item,
+    responses={
+        200: {
+            "content": {"image/png": {}},
+            "description": "Return the JSON item or an image.",
+        }
+    },
+)
+async def read_item(item_id: str, img: Union[bool, None] = None):
+    ...
+```
+> 기존의 응답에서 내용을 수정할 경우 해당 리소스를 덮어 쓰면 됩니다.  
+> 위의 200응답에 description의 경우가 기존의 응답을 덮어쓰는 코드 입니다.
+
+그리고 여러 응답을 한번에 추가 할 수 있습니다.  
+```python
+@app.get(
+    "/items/{item_id}",
+    response_model=Item,
+    responses={
+        404: {"model": Message, "description": "The item was not found"},
+        200: {
+            "description": "Item requested by ID",
+            "content": {
+                "application/json": {
+                    "example": {"id": "bar", "value": "The bar tenders"}
+                }
+            },
+        },
+    },
+)
+...
+```
+기존에 여러 응답을 별도로 정의 하여 사용하고 추가로 응답을 추가할 경우
+```python
+responses = {
+    404: {"description": "Item not found"},
+    302: {"description": "The item was moved"},
+    403: {"description": "Not enough privileges"},
+}
+
+@app.get(
+    "/items/{item_id}",
+    response_model=Item,
+    responses={**responses, 200: {"content": {"image/png": {}}}},
+)
+```
+responses에 단순하게 추가만 하면 적용이 됩니다.
