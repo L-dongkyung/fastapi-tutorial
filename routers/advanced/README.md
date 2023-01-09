@@ -480,3 +480,36 @@ responses = {
 )
 ```
 responses에 단순하게 추가만 하면 적용이 됩니다.
+
+## Response Cookies
+쿠키는 브라우저에서 저장하고 그 데이터를 요청시마다 헤더에 포함하여 서버로 전송합니다.  
+> 만료일(expiration) 혹은 지속시간(dration)을 설정하여 정해진 시간에만 서버로 전송할 수 있으며,  
+> 특정 도메인 혹은 경로제한을 설정할 수 있습니다.  
+
+쿠키를 설정하는 방법은 파라미터로 response를 받아서 추가하는 방법과,  
+처리 중간에 response를 선언하여 추가는 방법이 있습니다.  
+두가지 모두 `Response`의 `set_cookie`함수를 이용하여 쿠키 데이터를 전송합니다.  
+```python
+from fastapi import FastAPI, Response
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+# 1)
+@app.post("/cookie-and-object/")
+def create_cookie(response: Response):
+    response.set_cookie(key="fakesession", value="fake-cookie-session-value")
+    return {"message": "Come to the dark side, we have cookies"}
+
+# 2)
+@app.post("/cookie/")
+def create_cookie():
+    content = {"message": "Come to the dark side, we have cookies"}
+    response = JSONResponse(content=content)
+    response.set_cookie(key="fakesession", value="fake-cookie-session-value")
+    return response
+```
+1. 응답을 파라미터로 정의하여 쿠키를 설정하고 응답으로 여러 데이터 형식을 정의 할수 있습니다.(e.g. pydantic model)
+2. 응답을 코드 실행 중에 선언하여 쿠키와 응답 내용을 함께 설정합니다.  
+
+이 두가지 방법을 이용할 수 있고, 응답에 반환하는 데이터에 따라서 선택하여 쿠키를 설정해야 합니다.  
