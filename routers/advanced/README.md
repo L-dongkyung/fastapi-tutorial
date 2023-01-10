@@ -513,3 +513,27 @@ def create_cookie():
 2. 응답을 코드 실행 중에 선언하여 쿠키와 응답 내용을 함께 설정합니다.  
 
 이 두가지 방법을 이용할 수 있고, 응답에 반환하는 데이터에 따라서 선택하여 쿠키를 설정해야 합니다.  
+
+## Response Headers
+응답 헤더에 파라미터를 선언할 수 있습니다.  
+이미 middle ware에서 헤더에 `X-Process-Time`을 추가하였습니다.  
+이와 같은 방법으로 헤더에 파라미터를 추가 할 수 있습니다.  
+```python
+from fastapi import FastAPI
+from fastapi.responses import Response, JSONResponse
+
+app = FastAPI()
+
+
+@app.get("/headers-and-object/")
+def get_headers(response: Response):
+    response.headers["X-Cat-Dog"] = "alone in the world"
+    return {"message": "Hello World"}
+
+@app.get("/headers/")
+def get_headers():
+    content = {"message": "Hello World"}
+    headers = {"X-Cat-Dog": "alone in the world", "Content-Language": "en-US"}
+    return JSONResponse(content=content, headers=headers)
+```
+쿠키에 파라미터를 선언하는 방법과 동일하여 설명은 생략하겠습니다.  
