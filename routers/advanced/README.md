@@ -537,3 +537,23 @@ def get_headers():
     return JSONResponse(content=content, headers=headers)
 ```
 쿠키에 파라미터를 선언하는 방법과 동일하여 설명은 생략하겠습니다.  
+
+## Response - Change Status Code
+응답에서 `status_code`만 변경하고 싶은 경우가 있을 수 있습니다.  
+응답 데이터는 기존의 방식을 유지하며 status-code를 바꾸고 싶을 경우 `Response`파라미터를 사용합니다.  
+```python
+from fastapi import FastAPI, Response, status
+
+app = FastAPI()
+
+tasks = {"foo": "Listen to the Bar Fighters"}
+
+
+@app.put("/get-or-create-task/{task_id}", status_code=200)
+def get_or_create_task(task_id: str, response: Response):
+    if task_id not in tasks:
+        tasks[task_id] = "This didn't exist before"
+        response.status_code = status.HTTP_201_CREATED
+    return tasks[task_id]
+```
+`Response`파라미터를 받은 후에 직접 `status_code`를 변경하고 응답을 보내면 됩니다.  
