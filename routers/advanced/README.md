@@ -557,3 +557,48 @@ def get_or_create_task(task_id: str, response: Response):
     return tasks[task_id]
 ```
 `Response`파라미터를 받은 후에 직접 `status_code`를 변경하고 응답을 보내면 됩니다.  
+
+## Advanced Dependencies
+
+> 이 내용은 인위적으로 보일 수 있다고 합니다. 또한, 어떻게 사용할지 명확하지 않을수 있습니다.  
+> 하지만 예는 간단하고 어떻게 작동하는지 확인 할 수 있습니다.  
+> 보안 파트에서 해당 부분의 사용예(JWT)가 나옵니다.  
+> 이번에 로직을 이해했다면 보안 유틸리티 도구가 어떻게 작동하는지 이미 알고 있다고 합니다.  
+
+```python
+from fastapi import Depends, FastAPI
+
+app = FastAPI()
+
+
+class FixedContentQueryChecker:
+    def __init__(self, fixed_content: str):
+        self.fixed_content = fixed_content
+
+    def __call__(self, q: str = ""):
+        if q:
+            return self.fixed_content in q
+        return False
+
+
+checker = FixedContentQueryChecker("bar")
+
+
+@app.get("/query-checker/")
+async def read_query_check(fixed_content_included: bool = Depends(checker)):
+    return {"fixed_content_in_query": fixed_content_included}
+```
+위 코드를 OpenAPI로 확인하면 `__call__`메소드의 파라미터`q`를 쿼리파라미터로 보내야합니다.  
+그리고 그 내용에 `"bar"`가 있는지 확인합니다.  
+fastapi는 `__call__`메소드의 파라미터를 경로작업함수에 추가합니다.  
+
+`__init__`으로 객체를 파라미터화 하고 객체를 생성할 수 있습니다.  
+그리고 그 객체를 종속성에 주입하면서 경로가 작업을 시작할때에 종속성에 의해 객체를 호출합니다.  
+호출을 진행하면서 필요한 파라미터를 전달하고 결과 값을 반환합니다.  
+1. 서버가 로드 되면서 객체를 생성하고 checker에 할당합니다.(생성된 객체의 id값은 변화가 없습니다.)
+2. 경로 작업에 요청이 오면 `Depends`를 실행합니다.
+3. 경로 작업은 checker를 호출합니다.
+4. `checker(q=<params>)`로 q는 쿼리 파라미터로 전달 받습니다.
+5. `__call__` 함수로 이동하고 코드블럭을 실행합니다.  
+
+
