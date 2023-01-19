@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.routing import APIRoute
 
 from routers.advanced.endpoint import operation_config, status_code, direct_response, add_response_openapi, cookies,\
-    headers, advanced_depends
+    headers, advanced_depends, oauth2
 
 router = APIRouter(
     prefix="/advanced"
@@ -15,6 +15,7 @@ router.include_router(add_response_openapi.router, tags=["add_openapi_response"]
 router.include_router(cookies.router, tags=["cookies"])
 router.include_router(headers.router, tags=["headers"])
 router.include_router(advanced_depends.router, tags=["advanced-depends"])
+router.include_router(oauth2.router, tags=["OAuth2-scopes"])
 
 
 # def use_route_names_as_operation_ids(router: APIRouter) -> None:

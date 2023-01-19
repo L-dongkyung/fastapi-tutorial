@@ -32,7 +32,7 @@ tags_info = [
     },
 ]
 
-app = FastAPI(openapi_tags=tags_info, openapi_url="/api/tuto/docs", docs_url="/tuto/docs", redoc_url="/tuto/redoc", **app_info)
+app = FastAPI(openapi_tags=tags_info, openapi_url="/api/tuto/docs", redoc_url="/tuto/redoc", **app_info)
 
 
 @app.get("/")
