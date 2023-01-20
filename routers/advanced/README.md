@@ -622,3 +622,62 @@ scopes 정의는 복잡하기 때문에 공식문서로 확인하는 것을 추�
 > 공식문서에 조금더 자세하게 설명이 되어 있습니다. 하지만 큰 흐름을 이해하고 실서비스에 적용할 때에 다시 확인하는 것이 효율적으로 보입니다.  
 > 그리고 자체 서비스가 아닌 외부 사용자가 있을 경우에는 더 복잡하고 흐름이 변경될 수 있습니다.
 
+## HTTP Basic Auth
+간단하게 HTTP 인증을 사용할 수 있습니다.  
+HTTP 기본 인증 애플리케이션은 사용자이름(username), 비밀번호(password)가 포함된 헤더입니다.  
+`WWW-Authenticate`의 헤더키에 `Basic`값이 들어가고 추가적으로 `realm`을 추가할 수 있습니다.  
+```python
+from fastapi import Depends, FastAPI
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+
+app = FastAPI()
+
+security = HTTPBasic()
+
+
+@app.get("/users/me")
+def read_current_user(credentials: HTTPBasicCredentials = Depends(security)):
+    return {"username": credentials.username, "password": credentials.password}
+```
+`HTTPBasicCredentials`를 이용해서 브라우저에 usesrname, password를 입력할 수 있게합니다.  
+
+이를 통해서 유저를 검증하고 확인할 수 있습니다.  
+```python
+import secrets
+
+from fastapi import Depends
+from fastapi.security import HTTPBasicCredentials, HTTPBasic
+
+security = HTTPBasic()
+
+def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+    current_username_bytes = credentials.username.encode("utf8")
+    correct_username_bytes = b"stanleyjobson"
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, correct_username_bytes
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    correct_password_bytes = b"swordfish"
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, correct_password_bytes
+    )
+    ...
+```
+username, password 검증은 내장 함수인 `secrets`를 이용할 수 있습니다.(DB를 사용하면 필요 없어보입니다.)  
+단순 str로 비교하여 검사 할 수 있지만 `Timing Attacks`에 내장 함수를 이용하는 것이 더 안전하다고 나와있습니다.  
+> **Timing Attacks**  
+> 단순 문자열 검증의 경우 문자열을 순차적으로 확인하고 다를 경우 False를 반환합니다.  
+> 이 과정에서 첫번째 문자에서 반환하는 응답시간과 n번째 문자에서 반환하는 응답시간에 차이가 발생합니다.  
+> 이를 이용하여 수천 또는 수백만번의 요청을 이용하여 알맞는 문자들을 찾아 재조합하여 username, password를 찾을 수 있습니다.
+
+그리고 username, password가 다를 경우 에러를 반환하는데 이때에 401에러 반환해야합니다.  
+예전에는 id, password 등 다른 부분을 찾아서 반환 하였지만 이는 보안에 취약해집니다.  
+때문에 잘못된 정보가 입력되었을 경우에는 입력이 안된것과 같은 에러를 반환합니다.
+```python
+raise HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="Incorrect email or password",
+    headers={"WWW-Authenticate": "Basic"},
+)
+```
+
