@@ -681,3 +681,36 @@ raise HTTPException(
 )
 ```
 
+## Using the Request Directly
+앞의 미들웨어, 헤더 등에서 `Request`객체를 받아 데이터를 사용하거나 추가하였습니다.  
+OpenAPI에서는 request 객체를 표현하지 않습니다. 하지만 다른 매개변수는 정상적으로 표현해줍니다.  
+공식문서에서는 client의 host를 확인하는 코드가 작성되어 있습니다.  
+```python
+from fastapi import FastAPI, Request
+
+app = FastAPI()
+
+
+@app.get("/items/{item_id}")
+def read_root(item_id: str, request: Request):
+    client_host = request.client.host
+    return {"client_host": client_host, "item_id": item_id}
+```
+이미 헤더, 미들웨어, 쿠키 등을 통해 충분히 확인이 가능합니다.  
+저는 Debug를 통해서 `Reauest` 객체에 다음과 같은 속성이 있는 것을 확인하였습니다.  
+* app
+* base_url
+* client
+* cookies
+* headers
+* method
+* path_params
+* query_params
+* scope
+* state
+* url
+* ...
+
+OpenAPI를 통해 웹에서 간단히 확인한 것이고 모바일 또는 클라이언트(PC)에서 보낼 경우에 추가 또는 삭제 되는 속성이 있을 수 있습니다.  
+그리고 저는 크로스 플랫폼을 구현할 경우에 `user-Agent`를 확인해야 한다고 알고 있습니다. 이것은 headers에 있습니다.(당연하지만 확인 했습니다.)  
+
