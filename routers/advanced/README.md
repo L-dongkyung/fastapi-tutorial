@@ -714,3 +714,122 @@ def read_root(item_id: str, request: Request):
 OpenAPI를 통해 웹에서 간단히 확인한 것이고 모바일 또는 클라이언트(PC)에서 보낼 경우에 추가 또는 삭제 되는 속성이 있을 수 있습니다.  
 그리고 저는 크로스 플랫폼을 구현할 경우에 `user-Agent`를 확인해야 한다고 알고 있습니다. 이것은 headers에 있습니다.(당연하지만 확인 했습니다.)  
 
+## Using Dataclasses
+fastapi에서 dataclass를 사용할 수 있습니다.  
+```python
+from dataclasses import dataclass
+from typing import Union
+
+from fastapi import FastAPI
+
+
+@dataclass
+class Item:
+    name: str
+    price: float
+    description: Union[str, None] = None
+    tax: Union[float, None] = None
+
+
+app = FastAPI()
+
+
+@app.post("/items/")
+async def create_item(item: Item):
+    return item
+```
+dataclass를 pydantic 모델에 사용할 수 있습니다.  
+pydantic은 똑같이 사용할 수 있으며  
+* 데이터 검증
+* 데이터 직렬화(serialization)
+* 데이터 문서화
+
+또한 pydantic 모델처럼 `response_model`에 정의 할 수 있습니다.  
+```python
+from dataclasses import dataclass, field
+from typing import List, Union
+
+from fastapi import FastAPI
+
+
+@dataclass
+class Item:
+    name: str
+    price: float
+    tags: List[str] = field(default_factory=list)
+    description: Union[str, None] = None
+    tax: Union[float, None] = None
+
+
+app = FastAPI()
+
+
+@app.get("/items/next", response_model=Item)
+async def read_next_item():
+    return {
+        "name": "Island In The Moon",
+        "price": 12.99,
+        "description": "A place to be be playin' and havin' fun",
+        "tags": ["breater"],
+    }
+```
+
+또한 `dataclass`를 중첩구조로 사용할 수 있습니다.  
+```python
+from dataclasses import field  # 
+from typing import List, Union
+
+from fastapi import FastAPI
+from pydantic.dataclasses import dataclass  # 
+
+
+@dataclass
+class Item:
+    name: str
+    description: Union[str, None] = None
+
+
+@dataclass
+class Author:
+    name: str
+    items: List[Item] = field(default_factory=list)  # 
+
+
+app = FastAPI()
+
+
+@app.post("/authors/{author_id}/items/", response_model=Author)  # 
+async def create_author_items(author_id: str, items: List[Item]):  # 
+    return {"name": author_id, "items": items}  # 
+
+
+@app.get("/authors/", response_model=List[Author])  # 
+def get_authors():  # 
+    return [  # 
+        {
+            "name": "Breaters",
+            "items": [
+                {
+                    "name": "Island In The Moon",
+                    "description": "A place to be be playin' and havin' fun",
+                },
+                {"name": "Holy Buddies"},
+            ],
+        },
+        {
+            "name": "System of an Up",
+            "items": [
+                {
+                    "name": "Salt",
+                    "description": "The kombucha mushroom people's favorite",
+                },
+                {"name": "Pad Thai"},
+                {
+                    "name": "Lonely Night",
+                    "description": "The mostests lonliest nightiest of allest",
+                },
+            ],
+        },
+    ]
+```
+사용은 직관적으로 보이기 때문에 위의 내용과 같이 사용하면 됩니다.
