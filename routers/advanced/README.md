@@ -833,3 +833,33 @@ def get_authors():  #
     ]
 ```
 사용은 직관적으로 보이기 때문에 위의 내용과 같이 사용하면 됩니다.
+
+## Advanced Middleware
+앞서 CORS와 사용자지정 미들웨어(process-time)을 추가하는 법을 배웠습니다.  
+미들웨어는 app을 받아서 새로 앱을정의 할수도 있고,  
+```python
+from unicorn import UnicornMiddleware
+
+app = SomeASGIApp()
+
+new_app = UnicornMiddleware(app, some_config="rainbow")
+```
+fastapi에 middleware만 추가할 수 있습니다.(추천)  
+```python
+from fastapi import FastAPI
+from unicorn import UnicornMiddleware
+
+app = FastAPI()
+
+app.add_middleware(UnicornMiddleware, some_config="rainbow")
+```
+그리고 fastapi에서 지원해주는 middleware를 추가하여 사용할 수 있습니다.
+* HTTPSRedirectMiddleware
+* TrustedHostMiddleware
+* GZipMiddleware
+* ...
+
+각 미들웨어의 사용법은 필요할 경우 확인하여 사용하는것이 좋을것으로 보입니다.  
+정의된 미들웨어가 많고 사용방법에 차이가 있어서 미리 공부하는 것보다 필요할 경우 찾아서 추가하면 됩니다.  
+기타 미들웨어로 `sentry`, `uvicorn's ProxyHeadersMiddleware`, `MassagePack` 등이 있습니다.  
+
