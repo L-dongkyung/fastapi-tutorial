@@ -863,3 +863,63 @@ app.add_middleware(UnicornMiddleware, some_config="rainbow")
 정의된 미들웨어가 많고 사용방법에 차이가 있어서 미리 공부하는 것보다 필요할 경우 찾아서 추가하면 됩니다.  
 기타 미들웨어로 `sentry`, `uvicorn's ProxyHeadersMiddleware`, `MassagePack` 등이 있습니다.  
 
+## SQL (Relational) Databases with Peewee
+> 초심자라면 `SQLAlchemy`로 충분합니다. Peewee는 생략하여도 됩니다.  
+> Peewee를 안전하게 사용하려면 python3.7이상이 필요합니다.  
+
+fastapi, peewee는 `threading.local`에 의존하고 있고, 직접 재정의하거나 연결/세션을 직접 처리할 수 있는 방법이 없습니다.  
+하지만 Python3.7에서는 `contextvars`를 이용해서 새로운 비동기기능과 호환되는 `threading.local`을 적용할 수 있습니다.  
+
+이것은 복잡해 보일 수 있지만 사용하기 위해 작동 방식을 완전히 이해할 필요는 없습니다.  
+
+install
+```
+$ pip install peewee
+```
+
+peewee는 비동기 프레임워크용을 설계되지 않았습니다.  
+그러나 비동기 프레임워크(e.g. FastAPI) 등에서 일부 기본값, 미리 정의된 데이터베이스의 지원 등을 수정해야할 때에  
+복잡하고 많은 코드를 재정의 해야 합니다.  
+그럼에도 불구하고 FastAPI와 Peewee를 이용해서 추가해야하는 코드를 확인 할 수 있습니다.  
+```
+파일 구조
+.
+└── sql_app
+    ├── __init__.py
+    ├── crud.py
+    ├── database.py
+    ├── main.py
+    └── schemas.py
+```
+파일 구조는 `SQLAlchemy`와 동일한 구조입니다.
+
+database.py에 아래의 코드를 이용해서 DB를 정의 합니다.
+```python
+from contextvars import ContextVar
+
+import peewee
+
+DATABASE_NAME = "test.db"
+db_state_default = {"closed": None, "conn": None, "ctx": None, "transactions": None}
+db_state = ContextVar("db_state", default=db_state_default.copy())
+
+
+class PeeweeConnectionState(peewee._ConnectionState):
+    def __init__(self, **kwargs):
+        super().__setattr__("_state", db_state)
+        super().__init__(**kwargs)
+
+    def __setattr__(self, name, value):
+        self._state.get()[name] = value
+
+    def __getattr__(self, name):
+        return self._state.get()[name]
+
+
+db = peewee.SqliteDatabase(DATABASE_NAME, check_same_thread=False)
+
+db._state = PeeweeConnectionState()
+```
+> `db = peewee.SqliteDatabase(DATABASE_NAME, check_same_thread=False)`의 check_same_thread는 `SQLite`만 필요합니다.(SQLAlchemy도 동일)
+
+
