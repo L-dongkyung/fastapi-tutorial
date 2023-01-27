@@ -922,4 +922,138 @@ db._state = PeeweeConnectionState()
 ```
 > `db = peewee.SqliteDatabase(DATABASE_NAME, check_same_thread=False)`의 check_same_thread는 `SQLite`만 필요합니다.(SQLAlchemy도 동일)
 
+PeeweeConnectionState()를 `db._state`에 덮어써서 사용합니다.
+
+### Database model
+그리고 SQLAlchemy에서 생성한것과 같은 model을 models.py에 정의합니다.
+```python
+import peewee
+
+from .database import db
+
+
+class User(peewee.Model):
+    email = peewee.CharField(unique=True, index=True)
+    hashed_password = peewee.CharField()
+    is_active = peewee.BooleanField(default=True)
+
+    class Meta:
+        database = db
+
+
+class Item(peewee.Model):
+    title = peewee.CharField(index=True)
+    description = peewee.CharField(index=True)
+    owner = peewee.ForeignKeyField(User, backref="items")
+
+    class Meta:
+        database = db
+```
+> peewee는 기본키(primary key)가 될 `id`에 정수 속성을 자동으로 추가합니다.
+> `Item`클래스의 경우 선언하지 않아도 `User`클래스의 ID로 `owner_id`속성을 생성합니다.
+> (외래키(Foreignkey)에 의해서 `owner_id`가 생성되는 것으로 예상합니다.)
+
+### Pydantic model
+SQLAlchemy와 같이 스키마 모델을 schemas.py에 생성합니다.
+```python
+from typing import Any, List, Union
+
+import peewee
+from pydantic import BaseModel
+from pydantic.utils import GetterDict
+
+
+class PeeweeGetterDict(GetterDict):
+    def get(self, key: Any, default: Any = None):
+        res = getattr(self._obj, key, default)
+        if isinstance(res, peewee.ModelSelect):
+            return list(res)
+        return res
+
+
+class ItemBase(BaseModel):
+    title: str
+    description: Union[str, None] = None
+
+
+class ItemCreate(ItemBase):
+    pass
+
+
+class Item(ItemBase):
+    id: int
+    owner_id: int
+
+    class Config:
+        orm_mode = True
+        getter_dict = PeeweeGetterDict
+
+
+class UserBase(BaseModel):
+    email: str
+
+
+class UserCreate(UserBase):
+    password: str
+
+
+class User(UserBase):
+    id: int
+    is_active: bool
+    items: List[Item] = []
+
+    class Config:
+        orm_mode = True
+        getter_dict = PeeweeGetterDict
+```
+SQLAlchemy와 동일하고 `PeeweeGetterDict`가 추가되었습니다.  
+`user.items`를 사용하면 `peewee.ModelSelect`가 반환 됩니다. 이 타입은 generator로 `list`타입이 아니고, pydantic이 list로 변환하지 못합니다.  
+하지만 `GetterDict`를 사용하여 `peewee.ModelSelect` 객체이면 `list`로 변환하여 반환 할 수 있습니다.  
+이렇게 하기 위해서는 `Config`클래스에 `orm_mode = True`와 함께 `getter_dict = PeeweeGetterDict` 설정변수를 추가해야 합니다.  
+
+### CRUD
+CRUD도 SQLAlchemy와 동일합니다.  
+```python
+from . import models, schemas
+
+
+def get_user(user_id: int):
+    return models.User.filter(models.User.id == user_id).first()
+
+
+def get_user_by_email(email: str):
+    return models.User.filter(models.User.email == email).first()
+
+
+def get_users(skip: int = 0, limit: int = 100):
+    return list(models.User.select().offset(skip).limit(limit))
+
+
+def create_user(user: schemas.UserCreate):
+    fake_hashed_password = user.password + "notreallyhashed"
+    db_user = models.User(email=user.email, hashed_password=fake_hashed_password)
+    db_user.save()
+    return db_user
+
+
+def get_items(skip: int = 0, limit: int = 100):
+    return list(models.Item.select().offset(skip).limit(limit))
+
+
+def create_user_item(item: schemas.ItemCreate, user_id: int):
+    db_item = models.Item(**item.dict(), owner_id=user_id)
+    db_item.save()
+    return db_item
+```
+하지만 SQLAlchemy처럼 db 클래스를 가져오지 않고 models을 직접 사용합니다.  
+db 객체가 전역 객체로 정의되어 있어 모든 연결로직을 포함하고 있습니다. 그래서 `contextvars` 업데이트를 해야 합니다.  
+또한, 여러 객체를 반환 할때에 `list`로 강제 형변환을 할 수 있습니다.  
+```python
+def get_users(skip: int = 0, limit: int = 100):
+    return list(models.User.select().offset(skip).limit(limit))
+```
+이렇게 할수 있는 이유는 `PeeweeGetterDict`를 정의하였기 때문입니다.  
+그러나 경로작업에 `List[models.User]`로 `response_model`을 list로 정의하면 `Peewee.ModelSelect`로 반환하는 것이 아닌 response_model에 정의한 것으로 반환합니다.  
+이것은 나중에 어떻게 작동하는지 보여질 것입니다.  
+
 
