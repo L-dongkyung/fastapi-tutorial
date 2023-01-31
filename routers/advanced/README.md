@@ -1056,4 +1056,117 @@ def get_users(skip: int = 0, limit: int = 100):
 그러나 경로작업에 `List[models.User]`로 `response_model`을 list로 정의하면 `Peewee.ModelSelect`로 반환하는 것이 아닌 response_model에 정의한 것으로 반환합니다.  
 이것은 나중에 어떻게 작동하는지 보여질 것입니다.  
 
+### Main
+database 정의가 끝나면 main.py에서 모든 부분을 통합하여 서비스를 제공합니다.
+```python
+import time
+from typing import List
+
+from fastapi import Depends, FastAPI, HTTPException
+
+from . import crud, database, models, schemas
+from .database import db_state_default
+
+database.db.connect()
+database.db.create_tables([models.User, models.Item])
+database.db.close()
+
+app = FastAPI()
+
+sleep_time = 10
+
+
+async def reset_db_state():
+    database.db._state._state.set(db_state_default.copy())
+    database.db._state.reset()
+
+
+def get_db(db_state=Depends(reset_db_state)):
+    try:
+        database.db.connect()
+        yield
+    finally:
+        if not database.db.is_closed():
+            database.db.close()
+
+
+@app.post("/users/", response_model=schemas.User, dependencies=[Depends(get_db)])
+def create_user(user: schemas.UserCreate):
+    db_user = crud.get_user_by_email(email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(user=user)
+
+
+@app.get("/users/", response_model=List[schemas.User], dependencies=[Depends(get_db)])
+def read_users(skip: int = 0, limit: int = 100):
+    users = crud.get_users(skip=skip, limit=limit)
+    return users
+
+
+@app.get(
+    "/users/{user_id}", response_model=schemas.User, dependencies=[Depends(get_db)]
+)
+def read_user(user_id: int):
+    db_user = crud.get_user(user_id=user_id)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
+
+
+@app.post(
+    "/users/{user_id}/items/",
+    response_model=schemas.Item,
+    dependencies=[Depends(get_db)],
+)
+def create_item_for_user(user_id: int, item: schemas.ItemCreate):
+    return crud.create_user_item(item=item, user_id=user_id)
+
+
+@app.get("/items/", response_model=List[schemas.Item], dependencies=[Depends(get_db)])
+def read_items(skip: int = 0, limit: int = 100):
+    items = crud.get_items(skip=skip, limit=limit)
+    return items
+
+
+@app.get(
+    "/slowusers/", response_model=List[schemas.User], dependencies=[Depends(get_db)]
+)
+def read_slow_users(skip: int = 0, limit: int = 100):
+    global sleep_time
+    sleep_time = max(0, sleep_time - 1)
+    time.sleep(sleep_time)  # Fake long processing request
+    users = crud.get_users(skip=skip, limit=limit)
+    return users
+```
+종속성을 통해 요청에 따른 DB connection을 생성해줍니다.  
+```python
+async def reset_db_state():
+    database.db._state._state.set(db_state_default.copy())
+    database.db._state.reset()
+
+
+def get_db(db_state=Depends(reset_db_state)):
+    try:
+        database.db.connect()
+        yield
+    finally:
+        if not database.db.is_closed():
+            database.db.close()
+
+
+@app.post("/users/", dependencies=[Depends(get_db)])
+def create_user(user):
+    ...
+```
+
+SQLAlchemy와 비슷하게 `yield`를 통해서 connection을 연결하고 끝나면 `finally`를 통해서 close 해줍니다.  
+SQLAlchemy와 다른 점은 db를 따로 사용하지 않습니다.  
+SQLalchemy는 DB변수에서 모델 쿼리 등을 수행하지만 Peewee는 연결하고 그 응답을 사용하지 않기 때문에 데코레이터에 정의 하고 모델을 불러와 사용합니다.  
+
+> peewee는 `async def`가 아닌 일반`def`를 사용하였습니다.  
+> 때문에 db쿼리에 대해서 `await`을 안합니다.  
+> async def와 일반 def의 차이는 나중에 자세히 다룰 것입니다.
+
+
 
