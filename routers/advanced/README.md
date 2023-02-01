@@ -1168,5 +1168,21 @@ SQLalchemy는 DB변수에서 모델 쿼리 등을 수행하지만 Peewee는 연�
 > 때문에 db쿼리에 대해서 `await`을 안합니다.  
 > async def와 일반 def의 차이는 나중에 자세히 다룰 것입니다.
 
+### Testing Peewee with async
+마지막으로 `database.py`의 `# db._state = PeeweeConnectionState()`과 `main.py`의  
+```
+async def reset_db_state():
+#     database.db._state._state.set(db_state_default.copy())
+#     database.db._state.reset()
+    pass
+```
+부분을 주석처리하고 여러 요청을 보내면 중간에 서버에러를 발생합니다.  
+해당 부분이 작동을 안하면서 동일한 스레드에서 작업을 진행하고 DB와 연결한다는 것을 확인 할 수 있습니다.  
+
+> 공식문서에서는 이후 파일구조 및 코드를 점검합니다.  
+> 그리고 `threading.local`과 `contextvars`에 대해서 설명합니다.  
+> 마지막으로 `get_db()`를 통한 종속성 설정에 대해 기술되어있습니다.  
+> [Technical Details](https://fastapi.tiangolo.com/ko/advanced/sql-databases-peewee/#technical-details)를 통해서 확인하면 좋을 것으로 보입니다.  
+
 
 
