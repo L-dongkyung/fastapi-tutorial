@@ -1184,5 +1184,95 @@ async def reset_db_state():
 > 마지막으로 `get_db()`를 통한 종속성 설정에 대해 기술되어있습니다.  
 > [Technical Details](https://fastapi.tiangolo.com/ko/advanced/sql-databases-peewee/#technical-details)를 통해서 확인하면 좋을 것으로 보입니다.  
 
+## NoSQL (Distributed / Big Data) Databases
+
+FastAPI는 어떠한 NoSQL도 사용할 수 있습니다.  
+하지만 공식 문서에서는 `Couchbase`라는 DB를 사용합니다.
+* MongoDB
+* Cassandra
+* CouchDB
+* ArangoDB
+* ElasticSearch
+> MongoDB를 이용한 FastAPI는 간단하게 구현하여 repo에 저장하였습니다.  
+> [change_yaml_config](https://github.com/L-dongkyung/change_yaml_config)에서 MongoDB를 이용해서 yaml을 저장하고 수정하는 API를 정의하였습니다.  
+
+### Couchbase install
+```bash
+pip install couchbase
+```
+
+### Use Couchbase
+
+예시 코드는 아래와 같이 bucket을 연결하고 사용하면 됩니다.  
+> import 에러가 발생하고 있습니다.  
+> 버전에 따른 에러로 예상되고 실행테스트를 생략하겠습니다.  
+> 전체적인 구현 흐름만 이해하고 저는 MongoDB를 이용해서 이미 NoSQL을 연결하였기 때문에 이 코드는 생략하겠습니다.
+```python
+from typing import Union
+
+from couchbase import LOCKMODE_WAIT
+from couchbase.bucket import Bucket
+from couchbase.cluster import Cluster, PasswordAuthenticator
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+USERPROFILE_DOC_TYPE = "userprofile"
+
+
+def get_bucket():
+    cluster = Cluster(
+        "couchbase://couchbasehost:8091?fetch_mutation_tokens=1&operation_timeout=30&n1ql_timeout=300"
+    )
+    authenticator = PasswordAuthenticator("username", "password")
+    cluster.authenticate(authenticator)
+    bucket: Bucket = cluster.open_bucket("bucket_name", lockmode=LOCKMODE_WAIT)
+    bucket.timeout = 30
+    bucket.n1ql_timeout = 300
+    return bucket
+
+
+class User(BaseModel):
+    username: str
+    email: Union[str, None] = None
+    full_name: Union[str, None] = None
+    disabled: Union[bool, None] = None
+
+
+class UserInDB(User):
+    type: str = USERPROFILE_DOC_TYPE
+    hashed_password: str
+
+
+def get_user(bucket: Bucket, username: str):
+    doc_id = f"userprofile::{username}"
+    result = bucket.get(doc_id, quiet=True)
+    if not result.value:
+        return None
+    user = UserInDB(**result.value)
+    return user
+
+
+# FastAPI specific code
+app = FastAPI()
+
+
+@app.get("/users/{username}", response_model=User)
+def read_user(username: str):
+    bucket = get_bucket()
+    user = get_user(bucket=bucket, username=username)
+    return user
+```
+couchbase의 bucket에 연결하는 `get_bucket`함수를 정의합니다.  
+이 bucket으로 데이터를 처리할 것입니다.  
+
+pydantic 모델을 정의 하고 하나의 `field`는 type으로 생성합니다.  
+이것이 나중에 많은 도움이 될 것이라고 설명합니다.  
+
+그리고 `get_user`로 user 정보를 조회하는 함수를 정의합니다.  
+그 이후는 FastAPI의 endpoint를 정의하는 것과 같습니다.  
+
+각 NoSQL마다 Python에 맞는 패키지가 있고 이를 이용해서 간편하게 FastAPI와 함께 사용할 수 있습니다.  
+이번 절에서는 간단하게 코드를 보고 설명하여 NoSQL을 사용할 수 있는 것만 확인하였습니다.  
+
 
 
