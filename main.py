@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers.tutorial import tutorial_api
 from routers.advanced import advanced_api
+from routers.advanced.subapp.main import app as subapi
 
 # app info
 app_info = {
@@ -61,6 +62,9 @@ async def add_process_time_header(request: Request, call_next):
 
 # advanced APIs
 app.include_router(advanced_api.router)
+
+# sub application mount
+app.mount("/subapi", subapi)
 
 # if __name__ == '__main__':
 #     uvicorn.run('main:app', reload=True)

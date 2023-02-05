@@ -1274,5 +1274,38 @@ pydantic 모델을 정의 하고 하나의 `field`는 type으로 생성합니다
 각 NoSQL마다 Python에 맞는 패키지가 있고 이를 이용해서 간편하게 FastAPI와 함께 사용할 수 있습니다.  
 이번 절에서는 간단하게 코드를 보고 설명하여 NoSQL을 사용할 수 있는 것만 확인하였습니다.  
 
+## Sub Applications - Mounts
+Applicatio 마운트는 독립적은 OpenAPI를 가지는 두개의 앱을 연결하여 main 앱의 하위에 앱을 붙일 수 있습니다.  
+
+```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/app")
+def read_main():
+    return {"message": "Hello World from main app"}
+
+
+subapi = FastAPI()
+
+
+@subapi.get("/sub")
+def read_sub():
+    return {"message": "Hello World from sub API"}
+
+
+app.mount("/subapi", subapi)
+```
+코드에서 처럼 두개의 app을 정의 하고 main 앱에 `mount`함수를 이용하여 다른 앱을 붙일 수 있습니다.  
+이를 이용해서 API문서를 나눌 수 있습니다. 경로는 mount할 경우에 입력하는 prefix가 추가되지만 요청에서는 크게 바뀌지 않습니다.  
+> 문서를 나누는 부분에서는 많은 도움을 줄수 있을것 같습니다.  
+> Fastapi는 tag의 하위 tag를 아직 지원하지 않습니다.  
+> 그래서 하나의 tag에 endpoint가 많으면 관리가 쉽지 않지만 app단위로 먼저 문서를 나누고 tag로 다시 나누는 정도는 가능해 보입니다.  
+
+또한, 하위 app에 다시 하위 app을 mount 할 수 있습니다.  
+
+
 
 
