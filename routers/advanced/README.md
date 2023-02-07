@@ -1306,6 +1306,76 @@ app.mount("/subapi", subapi)
 
 또한, 하위 app에 다시 하위 app을 mount 할 수 있습니다.  
 
+## Behind a Proxy
+경우에 따라서 앱에 표시되지 않는 추가 접두사가 붙는 구성을 해야합니다.  
+**Traefik**이나 **Nginx**와 같은 프록시 서버를 사용해야할 수 있습니다.  
+
+fastapi의 `root_path`를 이 경우에 사용할 수 있습니다.  
+두가지 방법으로 root_path를 정의 할 수 있습니다.  
+### uvicorn에서 설정
+```bash
+$ uvicorn main:app --root-path /api/v1
+```
+위의 명령을 통해서 서버 오픈시에 root-path를 정의 할 수 있습니다.
+### app 에서 설정
+```python
+from fastapi import FastAPI, Request
+
+app = FastAPI(root_path="/api/v1")
 
 
+@app.get("/app")
+def read_main(request: Request):
+    return {"message": "Hello World", "root_path": request.scope.get("root_path")}
+```
+FastAPI 앱에서 root_path를 설정할 수 있습니다.
+
+로컬에서 `Traefik`을 이용해서 테스트 할 수 있습니다.
+traefik.toml파일을 아래와 같이 정의 합니다.
+```toml
+[entryPoints]
+  [entryPoints.http]
+    address = ":9999"
+
+[providers]
+  [providers.file]
+    filename = "routes.toml"
+```
+routes.toml을 정의 합니다.
+```toml
+[http]
+  [http.middlewares]
+
+    [http.middlewares.api-stripprefix.stripPrefix]
+      prefixes = ["/api/v1"]
+
+  [http.routers]
+
+    [http.routers.app-http]
+      entryPoints = ["http"]
+      service = "app"
+      rule = "PathPrefix(`/api/v1`)"
+      middlewares = ["api-stripprefix"]
+
+  [http.services]
+
+    [http.services.app]
+      [http.services.app.loadBalancer]
+        [[http.services.app.loadBalancer.servers]]
+          url = "http://127.0.0.1:8000"
+```
+Traefik을 다운로드 받고 이를 실행합니다.
+Assets에 많은 os별 파일이 있고 맞는 파일을 받아 압축을 풀면 하나의 파일이 있습니다. 이를 실행합니다.
+```bash
+./traefik --configFile=traefik.toml
+```
+traefik이 실행 중이면 fastapi app을 실행합니다.
+```bash
+uvicorn 메인:앱 --root-path /api/v1
+```
+이제 `http://127.0.0.1:8000/app/` 을 url에 검색하면 결과 값을 받을 수 있습니다.  
+하지만 docs는 접근이 안될 것입니다.  
+
+OpenAPI docs는 `http://127.0.0.1:9999/api/v1/docs` 를 입력하면 확인 할 수 있습니다.  
+> 추가 서버가 있지만 이것은 나중에 다시 확인하겠습니다.  
 
