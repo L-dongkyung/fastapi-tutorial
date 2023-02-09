@@ -3,6 +3,7 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.routing import APIRoute
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from routers.tutorial import tutorial_api
 from routers.advanced import advanced_api
@@ -65,6 +66,7 @@ app.include_router(advanced_api.router)
 
 # sub application mount
 app.mount("/subapi", subapi)
+app.mount("/routers/advanced/static", StaticFiles(directory='./routers/advanced/static'), name='static')
 
 # if __name__ == '__main__':
 #     uvicorn.run('main:app', reload=True)

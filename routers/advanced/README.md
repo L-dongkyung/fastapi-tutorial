@@ -1379,3 +1379,59 @@ uvicorn 메인:앱 --root-path /api/v1
 OpenAPI docs는 `http://127.0.0.1:9999/api/v1/docs` 를 입력하면 확인 할 수 있습니다.  
 > 추가 서버가 있지만 이것은 나중에 다시 확인하겠습니다.  
 
+## Templates
+FastAPI도 모든 템플릿 엔진을 사용할 수 있습니다.  
+일반적으로 사용하는 `jinja2`를 통해 템플릿을 구성하겠습니다.  
+```bash
+pip install jinja2
+```
+jinja2를 설치하고 임포트 하여 사용합니다.
+
+```python
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+app = FastAPI()
+
+app.mount("../../static", StaticFiles(directory="static"), name="static")
+
+templates = Jinja2Templates(directory="templates")
+
+
+@app.get("/items/{id}", response_class=HTMLResponse)
+async def read_item(request: Request, id: str):
+    return templates.TemplateResponse("item.html", {"request": request, "id": id})
+```
+`fastapi.templating`에서 `Jinja2Templates`를 임포트하여 `templates`객체를 생성합니다.  
+이 객체는 나중에 계속 사용할 수 있습니다.  
+그리고 경로 파라미터에 응답 클래스를 정의 해서 docs UI에게 응답값으로 html을 전달한다고 알려줍니다.
+
+template파일을 작성합니다.
+```html
+<html>
+<head>
+    <title>Item Details</title>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+    <h1>Item ID: {{ id }}</h1>
+</body>
+</html>
+```
+그리고 스타일을 위한 css 파일을 작성합니다.
+```css
+h1 {
+    color: green;
+}
+```
+그리고 해당 경로를 url에 입력하면 html로 작성된 브라우저 창을 볼 수 있습니다.  
+> ~~저는 `url_for`함수에서 경로(path)를 찾지 못하였습니다.~~  
+> ~~나중에 경로를 찾는 방법을 확인하여 수정하겠습니다.~~  
+> ~~url_for 문장(link태그)를 삭제하고 진행하면 html화면이 보입니다.~~  
+> mount를 통해서 `static`폴더를 app에 추가하는데 이는 최상위 app에 있어야 인식하는 것으로 보입니다.  
+> 만약 제가 틀렸거나 APIRouter에서 추가할 수 있는 방법을 아시는 분은 [email](mailto:ckldk91m@gmail.com)으로 연락주시기 바랍니다.  
+> email: ckldk91m@gmail.com
+
+
