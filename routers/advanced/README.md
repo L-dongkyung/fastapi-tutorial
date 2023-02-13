@@ -1434,4 +1434,58 @@ h1 {
 > 만약 제가 틀렸거나 APIRouter에서 추가할 수 있는 방법을 아시는 분은 [email](mailto:ckldk91m@gmail.com)으로 연락주시기 바랍니다.  
 > email: ckldk91m@gmail.com
 
+## GraphQL
+FastAPI는 ASGI를 표준으로 하고 있어서 ASGI와 호환되는 GraphQL라이브러리와 매우 쉽게 통합할 수 있습니다.  
+> GraphQL은 일반적인 Web API와 비교할때 장점과 단점이 있습니다.  
+> 이를 확인하여 장점이 단점보다 많은지 확인해야합니다.
+
+GraphQL 라이브러리
+* Strawberry
+* Ariadne
+* Tartiflette
+* Graphene
+
+GraphQL 중에서 Strawberry가 FastAPI의 디자인과 가장 유사하기 때문에 사용하기를 추천합니다.  
+그리고 Strawberry 또한 Type annotation 기반입니다.  
+
+### Strawberry install
+```bash
+pip install "strawberry-graphql[debug-server]"
+```
+간단한 예
+```python
+import strawberry
+from fastapi import FastAPI
+from strawberry.asgi import GraphQL
+
+
+@strawberry.type
+class User:
+    name: str
+    age: int
+
+
+@strawberry.type
+class Query:
+    @strawberry.field
+    def user(self) -> User:
+        return User(name="Patrick", age=100)
+
+
+schema = strawberry.Schema(query=Query)
+
+
+graphql_app = GraphQL(schema)
+
+app = FastAPI()
+app.add_route("/graphql", graphql_app)
+app.add_websocket_route("/graphql", graphql_app)
+```
+이를 통해서 graphql의 작동을 확인 할 수 있습니다.  
+저는 역시 APIRouter를 이용해서 main:app에 연결하였지만,  
+`http://127.0.0.1:8000/graphql` 를 통해서 작동을 확인 할 수 있었습니다.  
+(`http://127.0.0.1:8000/advanced/graphql` 이 아닙니다.)  
+> 이전 버전의 Starlette에 `GraphQLApp`이 있지만, Graphene으로 통합되었습니다.  
+> Starlette에서는 이제 지원하지 않지만 이미 사용하고 있는 코드가 있다면 `starlette-graphene3`으로 이전하기 쉬울 것입니다.  
+
 
