@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.routing import APIRoute
 
 from routers.advanced.endpoint import operation_config, status_code, direct_response, add_response_openapi, cookies,\
-    headers, advanced_depends, oauth2, http_auth, request, dataclass, template, graphql
+    headers, advanced_depends, oauth2, http_auth, request, dataclass, template, graphql, websocket
 from routers.advanced.endpoint.peewee import main
 
 router = APIRouter(
@@ -23,6 +23,7 @@ router.include_router(dataclass.router, tags=["dataclass"])
 router.include_router(main.router, tags=["peewee"])
 router.include_router(template.router, tags=["templates"])
 router.include_router(graphql.router, tags=["graphql"])
+router.include_router(websocket.router, tags=["websocket"])
 
 
 # def use_route_names_as_operation_ids(router: APIRouter) -> None:

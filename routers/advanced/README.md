@@ -1488,4 +1488,259 @@ app.add_websocket_route("/graphql", graphql_app)
 > 이전 버전의 Starlette에 `GraphQLApp`이 있지만, Graphene으로 통합되었습니다.  
 > Starlette에서는 이제 지원하지 않지만 이미 사용하고 있는 코드가 있다면 `starlette-graphene3`으로 이전하기 쉬울 것입니다.  
 
+## WebSockets
+간단하게 websocket을 설명하면 TCP 접속으로 통한 전 이중 통신 프로토콜입니다.  
+http 통신을 이용해서 연결을 하고 그 이후 websocket으로 변환하여 클라이언트와 서버가 실시간 통신을 합니다.  
+
+### Install
+```bash
+pip install websockets
+```
+React, Vue, Angular와 같은 프론트엔드를 구성하고 백엔드와 websocket 통신을 하는 것이 좋습니다.  
+아래의 예에서는 js를 포함한 간단한 HTML를 통해 작동 방식에 대해서만 이해하고  
+실제 production에서는 위의 옵션을 사용해야합니다.
+
+```python
+from fastapi import FastAPI, WebSocket
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+html = """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button>Send</button>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+            var ws = new WebSocket("ws://localhost:8000/ws");
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>
+"""
+
+
+@app.get("/")
+async def get():
+    return HTMLResponse(html)
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")
+```
+위의 코드에서는 html을 응답 받고 내부의 `script`를 통해서 `/ws`와 통신합니다.  
+이를 통해서 간단하게 websocket의 작동을 확인할 수 있습니다.  
+
+```python
+from typing import Union
+
+from fastapi import (
+    Cookie,
+    Depends,
+    FastAPI,
+    Query,
+    WebSocket,
+    WebSocketException,
+    status,
+)
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+html = """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <form action="" onsubmit="sendMessage(event)">
+            <label>Item ID: <input type="text" id="itemId" autocomplete="off" value="foo"/></label>
+            <label>Token: <input type="text" id="token" autocomplete="off" value="some-key-token"/></label>
+            <button onclick="connect(event)">Connect</button>
+            <hr>
+            <label>Message: <input type="text" id="messageText" autocomplete="off"/></label>
+            <button>Send</button>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+        var ws = null;
+            function connect(event) {
+                var itemId = document.getElementById("itemId")
+                var token = document.getElementById("token")
+                ws = new WebSocket("ws://localhost:8000/items/" + itemId.value + "/ws?token=" + token.value);
+                ws.onmessage = function(event) {
+                    var messages = document.getElementById('messages')
+                    var message = document.createElement('li')
+                    var content = document.createTextNode(event.data)
+                    message.appendChild(content)
+                    messages.appendChild(message)
+                };
+                event.preventDefault()
+            }
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>
+"""
+
+
+@app.get("/")
+async def get():
+    return HTMLResponse(html)
+
+
+async def get_cookie_or_token(
+    websocket: WebSocket,
+    session: Union[str, None] = Cookie(default=None),
+    token: Union[str, None] = Query(default=None),
+):
+    if session is None and token is None:
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    return session or token
+
+
+@app.websocket("/items/{item_id}/ws")
+async def websocket_endpoint(
+    websocket: WebSocket,
+    item_id: str,
+    q: Union[int, None] = None,
+    cookie_or_token: str = Depends(get_cookie_or_token),
+):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(
+            f"Session cookie or query token value is: {cookie_or_token}"
+        )
+        if q is not None:
+            await websocket.send_text(f"Query parameter q is: {q}")
+        await websocket.send_text(f"Message text was: {data}, for item ID: {item_id}")
+```
+이 코드는 `Depends`를 통해서 인증이 이루어진 상황에만 통신을 연결합니다.
+> WebSocketException은 fastapi가 아닌 websockets 라이브러리에서 import 해야하는 것으로 보입니다.
+
+여러 클라이언트와 통신을 하는 코드는 아래와 같습니다.
+```python
+from typing import List
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+html = """
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <h2>Your ID: <span id="ws-id"></span></h2>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off"/>
+            <button>Send</button>
+        </form>
+        <ul id='messages'>
+        </ul>
+        <script>
+            var client_id = Date.now()
+            document.querySelector("#ws-id").textContent = client_id;
+            var ws = new WebSocket(`ws://localhost:8000/ws/${client_id}`);
+            ws.onmessage = function(event) {
+                var messages = document.getElementById('messages')
+                var message = document.createElement('li')
+                var content = document.createTextNode(event.data)
+                message.appendChild(content)
+                messages.appendChild(message)
+            };
+            function sendMessage(event) {
+                var input = document.getElementById("messageText")
+                ws.send(input.value)
+                input.value = ''
+                event.preventDefault()
+            }
+        </script>
+    </body>
+</html>
+"""
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+
+manager = ConnectionManager()
+
+
+@app.get("/")
+async def get():
+    return HTMLResponse(html)
+
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: int):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.send_personal_message(f"You wrote: {data}", websocket)
+            await manager.broadcast(f"Client #{client_id} says: {data}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast(f"Client #{client_id} left the chat")
+```
+커넥션 리스트를 만들고 연결이 있을 경우 리스트에 추가합니다.  
+그리고 manager 객체에서 이벤트가 발생할 경우 ws에 메세지를 전송합니다.
+
+websocket에 대한 기본적인 작동 방식과 구조에 대해서 알아보았습니다.  
+
 
