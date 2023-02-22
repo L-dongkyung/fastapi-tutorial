@@ -1743,4 +1743,40 @@ async def websocket_endpoint(websocket: WebSocket, client_id: int):
 
 websocket에 대한 기본적인 작동 방식과 구조에 대해서 알아보았습니다.  
 
+## Events: startup - shutdown
+Application이 시작할 때 및 종료될 때에 실행해야하는 이벤트 핸들러를 정의 할 수 있습니다.
+
+### startup
+```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+items = {}
+
+
+@app.on_event("startup")
+async def startup_event():
+    items["foo"] = {"name": "Fighters"}
+    items["bar"] = {"name": "Tenders"}
+```
+startup 이벤트는 app이 시작되기 전에 실행해야하는 함수로 `config`, `Database` 등을 사전에 정의 할 수 있습니다.  
+startup 함수가 모두 완료 되기 전까지 app은 요청(request)를 수신하지 않습니다.
+
+### shutdown
+```python
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    with open("log.txt", mode="a") as log:
+        log.write("Application shutdown")
+```
+app이 종료될 때에 수행해야하는 함수로 `DB Disconnect` 등 종료될때에 온전하게 종료할 수 있게 정의 합니다.  
+
+
+
 
