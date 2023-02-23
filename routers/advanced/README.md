@@ -1777,6 +1777,60 @@ def shutdown_event():
 ```
 app이 종료될 때에 수행해야하는 함수로 `DB Disconnect` 등 종료될때에 온전하게 종료할 수 있게 정의 합니다.  
 
+## Custom Request and APIRoute class
+사용자 지정 `Request`와 `APIRoute`를 정의 하여 사용할 수 있습니다.
+이것의 사용사례는 아래와 같습니다.
+* json이 아닌 요청본문을 json으로 변환합니다.
+* gzip으로 압축된 본문의 압축을 풉니다.
+* 모든 요청을 자동으로 기록합니다.
+
+### GzipRequest 사용
+gzip의 작동 방식을 보여줍니다. `GzipMiddleware`의 지원을 받을 수 있습니다.
+```python
+import gzip
+from typing import Callable, List
+
+from fastapi import Body, FastAPI, Request, Response
+from fastapi.routing import APIRoute
+
+
+class GzipRequest(Request):
+    async def body(self) -> bytes:
+        if not hasattr(self, "_body"):
+            body = await super().body()
+            if "gzip" in self.headers.getlist("Content-Encoding"):
+                body = gzip.decompress(body)
+            self._body = body
+        return self._body
+
+
+class GzipRoute(APIRoute):
+    def get_route_handler(self) -> Callable:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            request = GzipRequest(request.scope, request.receive)
+            return await original_route_handler(request)
+
+        return custom_route_handler
+
+
+app = FastAPI()
+app.router.route_class = GzipRoute
+
+
+@app.post("/sum")
+async def sum_numbers(numbers: List[int] = Body()):
+    return {"sum": sum(numbers)}
+```
+먼저 `GzipRequest` 클래스를 정의합니다.  
+request.body()를 덮어써서(overwrite) 헤더에 `Content-Encoding`에 gzip이 있는지 확인합니다.  
+gzip이 있을 경우 압축을 풀고 없으면 그대로 return 합니다.  
+
+그리고 `GzipRoute`를 정의합니다.  
+상속받은 APIRoute의 `get_route_handler`를 overwrite 하고 내부에서 위에 선언한 `GzipRequest`를 이용하는 함수를 정의합니다.  
+반환값으로 해당 함수를 실행하면서 함수 내부의 결과 값에 상속 받은 get_router_handler에 request를 전달합니다.  
+
 
 
 
