@@ -1831,6 +1831,90 @@ gzip이 있을 경우 압축을 풀고 없으면 그대로 return 합니다.
 상속받은 APIRoute의 `get_route_handler`를 overwrite 하고 내부에서 위에 선언한 `GzipRequest`를 이용하는 함수를 정의합니다.  
 반환값으로 해당 함수를 실행하면서 함수 내부의 결과 값에 상속 받은 get_router_handler에 request를 전달합니다.  
 
+### Accessing the request body in an exception handler
+router에서의 예외처리도 같은 방식으로 진행 할 수 있습니다.
+```python
+from typing import Callable, List
+
+from fastapi import Body, FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.routing import APIRoute
+
+
+class ValidationErrorLoggingRoute(APIRoute):
+    def get_route_handler(self) -> Callable:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            try:
+                return await original_route_handler(request)
+            except RequestValidationError as exc:
+                body = await request.body()
+                detail = {"errors": exc.errors(), "body": body.decode()}
+                raise HTTPException(status_code=422, detail=detail)
+
+        return custom_route_handler
+
+
+app = FastAPI()
+app.router.route_class = ValidationErrorLoggingRoute
+
+
+@app.post("/")
+async def sum_numbers(numbers: List[int] = Body()):
+    return sum(numbers)
+```
+예외가 발생하면 Request 인스턴스는 try 구문 안에 있기 때문에 except 구문을 실행 합니다.  
+그리고 raise를 통해서 응답을 보냅니다.  
+추가로 except의 body는 request 인스턴스를 다시 받아서 decode해서 응답을 보냅니다.  
+
+### Custom APIRoute class in a router
+또한, 사용자가 route에 기능을 추가할 수 있습니다.  
+공식 문서에서는 request 의 시간을 측정하는 route를 구현하였습니다.  
+```python
+import time
+from typing import Callable
+
+from fastapi import APIRouter, FastAPI, Request, Response
+from fastapi.routing import APIRoute
+
+
+class TimedRoute(APIRoute):
+    def get_route_handler(self) -> Callable:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> Response:
+            before = time.time()
+            response: Response = await original_route_handler(request)
+            duration = time.time() - before
+            response.headers["X-Response-Time"] = str(duration)
+            print(f"route duration: {duration}")
+            print(f"route response: {response}")
+            print(f"route response headers: {response.headers}")
+            return response
+
+        return custom_route_handler
+
+
+app = FastAPI()
+router = APIRouter(route_class=TimedRoute)
+
+
+@app.get("/")
+async def not_timed():
+    return {"message": "Not timed"}
+
+
+@router.get("/timed")
+async def timed():
+    return {"message": "It's the time of my life"}
+
+
+app.include_router(router)
+```
+> `super().get_route_handler()`함수를 기준으로 이전에는 요청의 전처리를, 이후에는 후처리를 진행합니다.  
+> 또한 `route_class`를 정의하는 위치에 따라서 적용 유무가 발생합니다.  
+
 
 
 
