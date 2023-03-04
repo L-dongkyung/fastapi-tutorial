@@ -1915,6 +1915,66 @@ app.include_router(router)
 > `super().get_route_handler()`함수를 기준으로 이전에는 요청의 전처리를, 이후에는 후처리를 진행합니다.  
 > 또한 `route_class`를 정의하는 위치에 따라서 적용 유무가 발생합니다.  
 
+## Testing WebSockets
+websocket의 테스트는 app 과 동일하게 `TestClient`를 이용해서 진행할 수 있습니다.  
+websocket의 연결을 유지하기 위해서 `with`문을 이용할 수 있습니다.  
+```python
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from fastapi.websockets import WebSocket
+
+app = FastAPI()
+
+
+@app.get("/")
+async def read_main():
+    return {"msg": "Hello World"}
+
+
+@app.websocket("/ws")
+async def websocket(websocket: WebSocket):
+    await websocket.accept()
+    await websocket.send_json({"msg": "Hello WebSocket"})
+    await websocket.close()
+
+
+def test_read_main():
+    client = TestClient(app)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"msg": "Hello World"}
+
+
+def test_websocket():
+    client = TestClient(app)
+    with client.websocket_connect("/ws") as websocket:
+        data = websocket.receive_json()
+        assert data == {"msg": "Hello WebSocket"}
+```
+공식 문서에 나와있는 코드를 통해 기본 작동 원리르 파악 할 수 있고,  
+테스트는 기존에 작성한 `websocket.py`를 통해서 진행하겠습니다.  
+```python
+from fastapi.testclient import TestClient
+
+from main import app
+
+
+def test_websocket():
+    test_client = TestClient(app)
+    with test_client.websocket_connect("/advanced/ws/123") as ws:
+        ws.send_text("asdf")
+        data = ws.receive_text()
+        assert data == "You wrote: asdf"
+```
+테스트 코드를 작성하고 main.py가 있는 곳에서 `pytest`를 진행하면 테스트 작업이 작동합니다.  
+pytest 또는 unittest에 대한 설명은 나중에 하겠습니다.  
+> 또한 작업을 진행하면서 postman에서 ws를 연결하는 방법을 찾았습니다.  
+> 화면 왼쪽 제일 위에 my workspace가 있고 그 옆에 New를 누르면 websocket request가 있습니다.  
+> 주소에 `ws://localhost:8000/advanced/ws/1111`을 입력하면 연결되고 Message에 글을 쓰면 작동합니다.  
+> ![ws_postman_image](./ws_postman.png)
+
+
+
 
 
 
