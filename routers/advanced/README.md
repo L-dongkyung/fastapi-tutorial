@@ -1973,6 +1973,36 @@ pytest 또는 unittest에 대한 설명은 나중에 하겠습니다.
 > 주소에 `ws://localhost:8000/advanced/ws/1111`을 입력하면 연결되고 Message에 글을 쓰면 작동합니다.  
 > ![ws_postman_image](./ws_postman.png)
 
+## Testing Events: startup - shutdown
+startup 및 shutdown 이벤트에 대한 테스트를 진행 할 수 있습니다.
+공식문서에서는 전역변수인 `items`에 데이터를 입력하고 그 데이터를 요청으로 받아서 확인합니다.
+```python
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+app = FastAPI()
+
+items = {}
+
+
+@app.on_event("startup")
+async def startup_event():
+    items["foo"] = {"name": "Fighters"}
+    items["bar"] = {"name": "Tenders"}
+
+
+@app.get("/items/{item_id}")
+async def read_items(item_id: str):
+    return items[item_id]
+
+
+def test_read_items():
+    with TestClient(app) as client:
+        response = client.get("/items/foo")
+        assert response.status_code == 200
+        assert response.json() == {"name": "Fighters"}
+```
+tutorial에서 DB 초기화를 구현하지 않았는데 이부분을 구현하여 테스트해보면 좋을 것 같습니다.
 
 
 
